@@ -1,18 +1,11 @@
 from typing import List, Dict, Any
 import numpy as np
 from sentence_transformers import SentenceTransformer
-<<<<<<< HEAD
-from config import RANKING_MODEL
-
-_model = SentenceTransformer(RANKING_MODEL)
-_CURRENT_YEAR = 2024
-=======
 from datetime import datetime
 from config import RANKING_MODEL
 
 _model = SentenceTransformer(RANKING_MODEL)
 _CURRENT_YEAR = datetime.now().year
->>>>>>> ai-service-fix
 
 
 def _recency_score(year: int) -> float:
@@ -59,8 +52,4 @@ def rank_papers(claim: str, papers: List[Dict[str, Any]]) -> List[Dict[str, Any]
     for score, paper in scored:
         paper["relevance_score"] = round(score, 4)
         result.append(paper)
-<<<<<<< HEAD
     return result
-=======
-    return result
->>>>>>> ai-service-fix

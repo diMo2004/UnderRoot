@@ -14,7 +14,8 @@ def verify_doi(doi: str) -> bool:
 
 
 def format_ieee(paper: Dict[str, Any]) -> str:
-    authors = ", ".join(paper.get("authors_str", [paper.get("title", "")]))
+    authors_list = paper.get("authors_str") or paper.get("authors") or []
+    authors = ", ".join(authors_list) if isinstance(authors_list, list) else str(authors_list)
     title = paper.get("title", "")
     venue = paper.get("venue", "")
     year = paper.get("year", "")
@@ -51,10 +52,7 @@ def normalize_paper(raw: Dict[str, Any]) -> Dict[str, Any]:
         "paper_id": raw.get("paperId", ""),
         "title": raw.get("title", ""),
         "authors": authors,
-<<<<<<< HEAD
-=======
         "authors_str": authors,  # <-- add this line
->>>>>>> ai-service-fix
         "year": raw.get("year") or 0,
         "venue": raw.get("venue") or "",
         "citation_count": raw.get("citationCount") or 0,

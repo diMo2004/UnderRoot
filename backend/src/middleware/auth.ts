@@ -1,10 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-<<<<<<< HEAD
-import { config } from "../config/env.js";
-=======
 import { config } from "../config/env";
->>>>>>> ai-service-fix
 
 export interface AuthRequest extends Request {
   userId?: string;

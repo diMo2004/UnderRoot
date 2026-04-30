@@ -1,13 +1,5 @@
 import re
 from datetime import datetime, timezone
-<<<<<<< HEAD
-from fastapi import APIRouter
-from models.schemas import PlagiarismRequest, PlagiarismResponse
-from services.plagiarism_lexical import check_lexical
-from services.plagiarism_semantic import check_semantic
-from services.plagiarism_structural import check_structural
-from services.plagiarism_aggregator import build_section_result, aggregate_scores
-=======
 from hashlib import sha256
 from typing import List, Dict, Any
 from fastapi import APIRouter
@@ -20,7 +12,6 @@ from services.query_builder import build_query_from_text
 from services.domain_topics import build_domain_query, is_domain_relevant
 from services.scholarly_sources import build_multi_source_records_async
 from services.runtime_cache import get_cached, set_cached
->>>>>>> ai-service-fix
 
 router = APIRouter()
 
@@ -29,11 +20,8 @@ _HEADING_RE = re.compile(
     re.IGNORECASE,
 )
 
-<<<<<<< HEAD
-=======
 CACHE_TTL_SECONDS = 15 * 60  # 15 minutes
 
->>>>>>> ai-service-fix
 
 def _split_sections(text: str):
     """Split text into (section_title, sentences) pairs."""
@@ -59,20 +47,13 @@ def _split_sections(text: str):
     return sections if sections else [("Document", [text])]
 
 
-<<<<<<< HEAD
-# Placeholder reference corpus — in production this would be retrieved per-document
-_REFERENCE_CORPUS = [
-=======
 _FALLBACK_CORPUS = [
->>>>>>> ai-service-fix
     "Machine learning is a subfield of artificial intelligence.",
     "Deep learning models require large amounts of training data.",
     "Neural networks are inspired by the human brain.",
 ]
 
 
-<<<<<<< HEAD
-=======
 def _record_to_text(r: Dict[str, Any]) -> str:
     title = (r.get("title") or "").strip()
     abstract = (r.get("abstract") or "").strip()
@@ -122,30 +103,11 @@ def _attach_evidence(section_results, records, top_k: int = 3):
     return section_results
 
 
->>>>>>> ai-service-fix
 @router.post("/check", response_model=PlagiarismResponse)
 async def check_plagiarism(request: PlagiarismRequest):
     sections = _split_sections(request.text)
     section_results = []
 
-<<<<<<< HEAD
-    for title, sentences in sections:
-        if not sentences:
-            continue
-        lex = check_lexical(sentences, _REFERENCE_CORPUS)
-        sem = check_semantic(sentences, _REFERENCE_CORPUS)
-        struct = check_structural(sentences, _REFERENCE_CORPUS)
-        section_results.append(build_section_result(title, sentences, lex, sem, struct))
-
-    if section_results:
-        overall = sum(s["overall_score"] for s in section_results) / len(section_results)
-    else:
-        overall = 0.0
-
-    severities = {"low": 0, "moderate": 1, "high": 2, "critical": 3}
-    rev_severities = {v: k for k, v in severities.items()}
-    max_sev = max((severities.get(s["severity"], 0) for s in section_results), default=0)
-=======
     corpus: List[str] = []
     records: List[Dict[str, Any]] = []
     semantic_runtime = None
@@ -209,7 +171,6 @@ async def check_plagiarism(request: PlagiarismRequest):
         sum(s["overall_score"] for s in section_results) / len(section_results)
         if section_results else 0.0
     )
->>>>>>> ai-service-fix
 
     if overall < 0.15:
         sev_label = "low"
@@ -225,8 +186,4 @@ async def check_plagiarism(request: PlagiarismRequest):
         severity=sev_label,
         sections=section_results,
         checked_at=datetime.now(timezone.utc).isoformat(),
-<<<<<<< HEAD
     )
-=======
-    )
->>>>>>> ai-service-fix

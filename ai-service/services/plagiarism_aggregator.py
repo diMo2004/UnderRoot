@@ -1,154 +1,92 @@
 from typing import List, Dict, Any
 
-<<<<<<< HEAD
-# Composite weights
-=======
->>>>>>> ai-service-fix
-W_LEX = 0.3
-W_SEM = 0.5
-W_STRUCT = 0.2
+W_LEX, W_SEM, W_STRUCT = 0.3, 0.5, 0.2
 
-<<<<<<< HEAD
-# Adaptive thresholds per section type
-=======
->>>>>>> ai-service-fix
-_THRESHOLDS = {
-    "abstract": 0.15,
-    "introduction": 0.20,
-    "related work": 0.35,
-    "methodology": 0.20,
-    "results": 0.20,
-    "discussion": 0.25,
-    "conclusion": 0.20,
-    "default": 0.25,
+SECTION_THRESHOLDS = {
+    "abstract": 0.45,
+    "introduction": 0.50,
+    "related work": 0.55,
+    "methodology": 0.60,
+    "results": 0.62,
+    "discussion": 0.58,
+    "conclusion": 0.52,
+    "document": 0.55,
 }
 
-<<<<<<< HEAD
+MIN_MATCH_SCORE = 0.35
 
-=======
->>>>>>> ai-service-fix
-def _severity(score: float, threshold: float) -> str:
-    if score < threshold * 0.5:
+
+def _get_threshold(section_title: str) -> float:
+    t = (section_title or "document").strip().lower()
+    return SECTION_THRESHOLDS.get(t, SECTION_THRESHOLDS["document"])
+
+
+def _severity(score: float) -> str:
+    if score < 0.15:
         return "low"
-    elif score < threshold:
+    if score < 0.25:
         return "moderate"
-    elif score < threshold * 1.5:
+    if score < 0.40:
         return "high"
-<<<<<<< HEAD
-    else:
-        return "critical"
+    return "critical"
 
 
-def aggregate_scores(
-    lex_scores: List[float],
-    sem_scores: List[float],
-    struct_scores: List[float],
-) -> List[float]:
-    """Combine three layers into composite scores."""
-    result = []
-    for l, s, st in zip(lex_scores, sem_scores, struct_scores):
-        composite = W_LEX * l + W_SEM * s + W_STRUCT * st
-        result.append(composite)
-    return result
+def _heat_band(score: float):
+    # score in [0..1]
+    if score < 0.25:
+        return "low", "#dcfce7", "#22c55e"      # bg, text-accent
+    elif score < 0.40:
+        return "moderate", "#fef9c3", "#eab308"
+    elif score < 0.60:
+        return "high", "#ffedd5", "#f97316"
+    return "critical", "#fee2e2", "#ef4444"
 
 
 def build_section_result(
     section_title: str,
     sentences: List[str],
-    lex_scores: List[float],
-    sem_scores: List[float],
-    struct_scores: List[float],
+    lex: List[Dict[str, Any]],
+    sem: List[Dict[str, Any]],
+    struct: List[Dict[str, Any]],
 ) -> Dict[str, Any]:
-=======
-    return "critical"
+    threshold = _get_threshold(section_title)
+    matches: List[Dict[str, Any]] = []
+    sentence_scores: List[float] = []
 
-def _score(x: Any) -> float:
-    return float(x.get("score", 0.0)) if isinstance(x, dict) else float(x)
+    for i, sent in enumerate(sentences):
+        lx = float(lex[i].get("score", 0.0)) if i < len(lex) else 0.0
+        sm = float(sem[i].get("score", 0.0)) if i < len(sem) else 0.0
+        st = float(struct[i].get("score", 0.0)) if i < len(struct) else 0.0
 
-def aggregate_scores(lex_scores: List[Any], sem_scores: List[Any], struct_scores: List[Any]) -> List[float]:
-    out = []
-    for l, s, st in zip(lex_scores, sem_scores, struct_scores):
-        out.append(W_LEX * _score(l) + W_SEM * _score(s) + W_STRUCT * _score(st))
-    return out
+        score = W_LEX * lx + W_SEM * sm + W_STRUCT * st
+        sentence_scores.append(score)
 
-def build_section_result(section_title: str, sentences: List[str], lex_scores: List[Any], sem_scores: List[Any], struct_scores: List[Any]) -> Dict[str, Any]:
->>>>>>> ai-service-fix
-    composite = aggregate_scores(lex_scores, sem_scores, struct_scores)
-    overall = float(sum(composite) / len(composite)) if composite else 0.0
+        if score >= max(threshold * 0.5, MIN_MATCH_SCORE):
+            band, bg_color, _accent = _heat_band(score)
 
-    key = section_title.lower()
-<<<<<<< HEAD
-    threshold = next(
-        (v for k, v in _THRESHOLDS.items() if k in key),
-        _THRESHOLDS["default"],
-    )
-    severity = _severity(overall, threshold)
+            sem_idx = sem[i].get("source_index", -1) if i < len(sem) else -1
+            sem_text = sem[i].get("source_text", "") if i < len(sem) else ""
 
-    matches = []
-    for i, (sent, score) in enumerate(zip(sentences, composite)):
-        if score > threshold * 0.5:
             matches.append({
-                "matched_text": sent[:200],
+                "matched_text": sent,
                 "source": "corpus",
                 "similarity": round(score, 4),
                 "start_index": i,
-                "end_index": i + len(sent),
-=======
-    threshold = next((v for k, v in _THRESHOLDS.items() if k in key), _THRESHOLDS["default"])
-    severity = _severity(overall, threshold)
+                "end_index": i,
+                "source_index": sem_idx,
+                "source_text": sem_text,
+                "source_layer": "hybrid",
 
-    matches = []
-    MIN_MATCH_SCORE = 0.35
-    for i, (sent, score) in enumerate(zip(sentences, composite)):
-        if score > max(threshold * 0.5, MIN_MATCH_SCORE):
-            candidates = []
-            for layer_name, layer_val in [
-                ("lexical", lex_scores[i] if i < len(lex_scores) else {}),
-                ("semantic", sem_scores[i] if i < len(sem_scores) else {}),
-                ("structural", struct_scores[i] if i < len(struct_scores) else {}),
-            ]:
-                if isinstance(layer_val, dict):
-                    candidates.append({
-                        "layer": layer_name,
-                        "score": float(layer_val.get("score", 0.0)),
-                        "source_index": int(layer_val.get("source_index", -1)),
-                        "source_text": layer_val.get("source_text", ""),
-                    })
-
-            candidates = [c for c in candidates if c["source_index"] >= 0]
-            candidates = sorted(candidates, key=lambda x: x["score"], reverse=True)
-
-            best = candidates[0] if candidates else {"layer": "none", "source_index": -1, "source_text": ""}
-
-            # unique ordered indices
-            seen = set()
-            idxs = []
-            for c in candidates:
-                si = c["source_index"]
-                if si not in seen:
-                    seen.add(si)
-                    idxs.append(si)
-
-            matches.append({
-                "matched_text": sent[:200],
-                "source": "corpus",
-                "similarity": round(float(score), 4),
-                "start_index": i,
-                "end_index": i + len(sent),
-                "source_index": best["source_index"],
-                "source_text": best["source_text"],
-                "source_layer": best["layer"],
-                "candidate_source_indices": idxs,  # REQUIRED for top_sources
->>>>>>> ai-service-fix
+                # heatmap fields
+                "risk_band": band,
+                "heatmap_color": bg_color,
             })
+
+    overall = sum(sentence_scores) / len(sentence_scores) if sentence_scores else 0.0
 
     return {
         "section_title": section_title,
         "overall_score": round(overall, 4),
-        "severity": severity,
+        "severity": _severity(overall),
         "matches": matches,
-<<<<<<< HEAD
     }
-=======
-    }
->>>>>>> ai-service-fix

@@ -1,16 +1,5 @@
 import re
 from typing import List
-<<<<<<< HEAD
-import google.generativeai as genai
-from config import GEMINI_API_KEY
-
-genai.configure(api_key=GEMINI_API_KEY)
-_model = genai.GenerativeModel("gemini-1.5-flash")
-
-
-def detect_claims(text: str) -> List[str]:
-    """Use Gemini 1.5 Flash to identify citable claims in the text."""
-=======
 from google import genai
 from config import GEMINI_API_KEY, GEMINI_MODEL
 
@@ -38,7 +27,6 @@ def detect_claims(text: str) -> List[str]:
     if not _USE_GEMINI or _client is None:
         return _fallback_claims(text)
 
->>>>>>> ai-service-fix
     prompt = (
         "You are a scientific writing assistant. Analyze the following text and identify "
         "sentences that are CITABLE_CLAIM (factual statements that need a citation). "
@@ -46,20 +34,6 @@ def detect_claims(text: str) -> List[str]:
         "Return only the citable claim sentences, one per line, with no extra text.\n\n"
         f"Text:\n{text}"
     )
-<<<<<<< HEAD
-    try:
-        response = _model.generate_content(prompt)
-        claims = [
-            line.strip()
-            for line in response.text.strip().split("\n")
-            if line.strip() and len(line.strip()) > 10
-        ]
-        return claims
-    except Exception:
-        # Fallback: split on sentence boundaries
-        sentences = re.split(r"(?<=[.!?])\s+", text)
-        return [s.strip() for s in sentences if len(s.strip()) > 20]
-=======
 
     try:
         resp = _client.models.generate_content(
@@ -72,4 +46,3 @@ def detect_claims(text: str) -> List[str]:
         return claims[:10] if claims else _fallback_claims(text)
     except Exception:
         return _fallback_claims(text)
->>>>>>> ai-service-fix
