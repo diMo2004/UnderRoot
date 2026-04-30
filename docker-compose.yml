@@ -6,8 +6,9 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_BACKEND_URL=http://backend:4000
-      - NEXT_PUBLIC_COLLAB_URL=ws://backend:4001
+      - NEXT_PUBLIC_BACKEND_URL=http://localhost:4000
+      - NEXT_PUBLIC_COLLAB_URL=ws://localhost:4001
+      - NEXT_PUBLIC_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
     depends_on:
       - backend
 
@@ -20,6 +21,8 @@ services:
       - DATABASE_URL=postgresql://underroot:underroot@postgres:5432/underroot
       - MONGODB_URL=mongodb://mongo:27017/underroot
       - REDIS_URL=redis://redis:6379
+      - AI_SERVICE_URL=http://ai-service:8000
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
     depends_on:
       - postgres
       - mongo
