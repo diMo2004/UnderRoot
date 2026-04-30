@@ -1,0 +1,433 @@
+warning: in the working copy of 'ai-service/routers/citation.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/src/config/env.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docker-compose.yml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/package-lock.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/package.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/app/editor/[projectId]/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/app/layout.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/components/Editor/TiptapEditor.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/components/Plagiarism/PlagiarismPanel.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/types/index.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/tsconfig.json', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/ai-service/config.py b/ai-service/config.py[m
+[1mindex 57a913e..cef4f81 100644[m
+[1m--- a/ai-service/config.py[m
+[1m+++ b/ai-service/config.py[m
+[36m@@ -4,13 +4,7 @@[m [mfrom dotenv import load_dotenv[m
+ load_dotenv()[m
+ [m
+ GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")[m
+[31m-<<<<<<< HEAD[m
+[31m-SEMANTIC_SCHOLAR_API_KEY: str = os.getenv("SEMANTIC_SCHOLAR_API_KEY", "")[m
+[31m-SBERT_MODEL: str = "paraphrase-MiniLM-L12-v2"[m
+[31m-RANKING_MODEL: str = "all-MiniLM-L6-v2"[m
+[31m-=======[m
+ GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")[m
+ SEMANTIC_SCHOLAR_API_KEY: str = os.getenv("SEMANTIC_SCHOLAR_API_KEY", "")[m
+ SBERT_MODEL: str = "paraphrase-MiniLM-L12-v2"[m
+ RANKING_MODEL: str = "all-MiniLM-L6-v2"[m
+[31m->>>>>>> ai-service-fix[m
+[1mdiff --git a/ai-service/main.py b/ai-service/main.py[m
+[1mindex e440789..58076c0 100644[m
+[1m--- a/ai-service/main.py[m
+[1m+++ b/ai-service/main.py[m
+[36m@@ -1,7 +1,4 @@[m
+[31m-<<<<<<< HEAD[m
+ import os[m
+[31m-=======[m
+[31m->>>>>>> ai-service-fix[m
+ from fastapi import FastAPI[m
+ from fastapi.middleware.cors import CORSMiddleware[m
+ from routers import citation, plagiarism, summary[m
+[36m@@ -12,7 +9,6 @@[m [mapp = FastAPI([m
+     description="AI-powered citation suggestions, plagiarism detection, and summarization for UnderRoot.",[m
+ )[m
+ [m
+[31m-<<<<<<< HEAD[m
+ allowed_origins = [[m
+     origin.strip()[m
+     for origin in os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")[m
+[36m@@ -21,12 +17,7 @@[m [mallowed_origins = [[m
+ [m
+ app.add_middleware([m
+     CORSMiddleware,[m
+[31m-    allow_origins=allowed_origins,[m
+[31m-=======[m
+[31m-app.add_middleware([m
+[31m-    CORSMiddleware,[m
+[31m-    allow_origins=["*"],[m
+[31m->>>>>>> ai-service-fix[m
+[32m+[m[32m    allow_origins=allowed_origins if allowed_origins else ["*"],[m
+     allow_credentials=True,[m
+     allow_methods=["*"],[m
+     allow_headers=["*"],[m
+[36m@@ -36,13 +27,7 @@[m [mapp.include_router(citation.router, prefix="/api/citations", tags=["citations"])[m
+ app.include_router(plagiarism.router, prefix="/api/plagiarism", tags=["plagiarism"])[m
+ app.include_router(summary.router, prefix="/api/summary", tags=["summary"])[m
+ [m
+[31m-<<<<<<< HEAD[m
+[31m-@app.get("/health")[m
+[31m-def health():[m
+[31m-    return {"status": "ok", "service": "underroot-ai-service"}[m
+[31m-=======[m
+ [m
+ @app.get("/health")[m
+ def health():[m
+[31m-    return {"status": "ok", "service": "underroot-ai-service"}[m
+[31m->>>>>>> ai-service-fix[m
+[32m+[m[32m    return {"status": "ok", "service": "underroot-ai-service"}[m
+\ No newline at end of file[m
+[1mdiff --git a/ai-service/models/schemas.py b/ai-service/models/schemas.py[m
+[1mindex 1e805b9..2ca9226 100644[m
+[1m--- a/ai-service/models/schemas.py[m
+[1m+++ b/ai-service/models/schemas.py[m
+[36m@@ -1,82 +1,7 @@[m
+[32m+[m[32mfrom typing import List, Optional, Union, Any, Dict[m
+ from pydantic import BaseModel[m
+[31m-from typing import List, Optional[m
+ [m
+ [m
+[31m-# Citation schemas[m
+[31m-class CitationRequest(BaseModel):[m
+[31m-    text: str[m
+[31m-    project_id: Optional[str] = None[m
+[31m-[m
+[31m-[m
+[31m-class Paper(BaseModel):[m
+[31m-    paper_id: str[m
+[31m-    title: str[m
+[31m-    authors: List[str][m
+[31m-    year: int[m
+[31m-    venue: str[m
+[31m-    citation_count: int[m
+[31m-    relevance_score: float[m
+[31m-    doi: Optional[str] = None[m
+[31m-    url: Optional[str] = None[m
+[31m-    abstract: Optional[str] = None[m
+[31m-[m
+[31m-[m
+[31m-class CitationResponse(BaseModel):[m
+[31m-    citations: List[Paper][m
+[31m-    claims_detected: List[str][m
+[31m-[m
+[31m-[m
+[31m-# Plagiarism schemas[m
+[31m-<<<<<<< HEAD[m
+[31m-class PlagiarismRequest(BaseModel):[m
+[31m-    text: str[m
+[31m-    project_id: Optional[str] = None[m
+[31m-[m
+[31m-[m
+[31m-class PlagiarismMatch(BaseModel):[m
+[31m-    matched_text: str[m
+[31m-    source: str[m
+[31m-    similarity: float[m
+[31m-    start_index: int[m
+[31m-    end_index: int[m
+[31m-=======[m
+[31m->>>>>>> ai-service-fix[m
+[31m-[m
+[31m-[m
+[31m-class SectionPlagiarism(BaseModel):[m
+[31m-    section_title: str[m
+[31m-    overall_score: float[m
+[31m-    severity: str  # low | moderate | high | critical[m
+[31m-    matches: List[PlagiarismMatch][m
+[31m-[m
+[31m-[m
+[31m-<<<<<<< HEAD[m
+[31m-class PlagiarismResponse(BaseModel):[m
+[31m-    overall_score: float[m
+[31m-    severity: str[m
+[31m-    sections: List[SectionPlagiarism][m
+[31m-    checked_at: str[m
+[31m-[m
+[31m-[m
+[31m-=======[m
+[31m->>>>>>> ai-service-fix[m
+[31m-# Summary schemas[m
+[31m-class SummaryRequest(BaseModel):[m
+[31m-    text: str[m
+[31m-    project_id: Optional[str] = None[m
+[31m-[m
+[31m-[m
+[31m-class SectionSummary(BaseModel):[m
+[31m-    title: str[m
+[31m-    summary: str[m
+[31m-[m
+[31m-[m
+[31m-class SummaryResponse(BaseModel):[m
+[31m-    section_summaries: List[SectionSummary][m
+[31m-    abstract_draft: str[m
+[31m-<<<<<<< HEAD[m
+[31m-=======[m
+[31m-[m
+ class SourceEvidence(BaseModel):[m
+     title: Optional[str] = None[m
+     url: Optional[str] = None[m
+[36m@@ -87,7 +12,7 @@[m [mclass SourceEvidence(BaseModel):[m
+ [m
+ class PlagiarismMatch(BaseModel):[m
+     matched_text: str[m
+[31m-    source: SourceEvidence | str[m
+[32m+[m[32m    source: Union[SourceEvidence, str][m
+     similarity: float[m
+     start_index: int[m
+     end_index: int[m
+[36m@@ -97,6 +22,10 @@[m [mclass PlagiarismMatch(BaseModel):[m
+     candidate_source_indices: Optional[List[int]] = None[m
+     top_sources: Optional[List[SourceEvidence]] = None[m
+ [m
+[32m+[m[32m    # NEW (heatmap)[m
+[32m+[m[32m    risk_band: Optional[str] = None          # low|moderate|high|critical[m
+[32m+[m[32m    heatmap_color: Optional[str] = None      # hex color[m
+[32m+[m
+ [m
+ class PlagiarismSection(BaseModel):[m
+     section_title: str[m
+[36m@@ -116,4 +45,46 @@[m [mclass PlagiarismResponse(BaseModel):[m
+     severity: str[m
+     sections: List[PlagiarismSection][m
+     checked_at: str[m
+[31m->>>>>>> ai-service-fix[m
+[32m+[m
+[32m+[m[32mclass CitationFormatSource(BaseModel):[m
+[32m+[m[32m    title: Optional[str] = None[m
+[32m+[m[32m    url: Optional[str] = None[m
+[32m+[m[32m    doi: Optional[str] = None[m
+[32m+[m[32m    year: Optional[int] = None[m
+[32m+[m[32m    provider: Optional[str] = None[m
+[32m+[m[32m    authors_str: Optional[List[str]] = None[m
+[32m+[m[32m    venue: Optional[str] = None[m
+[32m+[m
+[32m+[m
+[32m+[m[32mclass CitationFormatRequest(BaseModel):[m
+[32m+[m[32m    style: str  # ieee|apa|acm[m
+[32m+[m[32m    source: CitationFormatSource[m
+[32m+[m[32m    index: int = 1[m
+[32m+[m
+[32m+[m
+[32m+[m[32mclass CitationFormatResponse(BaseModel):[m
+[32m+[m[32m    citation_text: str[m
+[32m+[m[32m    style: str[m
+[32m+[m
+[32m+[m[32mclass CitationRequest(BaseModel):[m
+[32m+[m[32m    text: str[m
+[32m+[m[32m    projectId: Optional[str] = None  # frontend sends camelCase[m
+[32m+[m
+[32m+[m
+[32m+[m[32mclass CitationResponse(BaseModel):[m
+[32m+[m[32m    citations: List[Dict[str, Any]][m
+[32m+[m[32m    claims_detected: List[str][m
+[32m+[m
+[32m+[m[32mclass SectionSummary(BaseModel):[m
+[32m+[m[32m    title: str[m
+[32m+[m[32m    summary: str[m
+[32m+[m
+[32m+[m
+[32m+[m[32mclass SummaryRequest(BaseModel):[m
+[32m+[m[32m    text: str[m
+[32m+[m[32m    projectId: Optional[str] = None[m
+[32m+[m
+[32m+[m
+[32m+[m[32mclass SummaryResponse(BaseModel):[m
+[32m+[m[32m    sectionSummaries: List[SectionSummary][m
+[32m+[m[32m    abstractDraft: str[m
+\ No newline at end of file[m
+[1mdiff --git a/ai-service/requirements.txt b/ai-service/requirements.txt[m
+[1mindex 86c887c..8ce6016 100644[m
+[1m--- a/ai-service/requirements.txt[m
+[1m+++ b/ai-service/requirements.txt[m
+[36m@@ -6,12 +6,6 @@[m [mfaiss-cpu>=1.7.4[m
+ scikit-learn>=1.3.0[m
+ numpy>=1.24.0[m
+ requests>=2.31.0[m
+[31m-<<<<<<< HEAD[m
+[31m-google-generativeai>=0.3.0[m
+[31m-simhash>=2.1.0[m
+[31m-python-dotenv>=1.0.0[m
+[31m-=======[m
+ google-genai>=1.70.0[m
+ simhash>=2.1.0[m
+ python-dotenv>=1.0.0[m
+[31m->>>>>>> ai-service-fix[m
+[1mdiff --git a/ai-service/routers/citation.py b/ai-service/routers/citation.py[m
+[1mindex 46ae8a9..68bed4a 100644[m
+[1m--- a/ai-service/routers/citation.py[m
+[1m+++ b/ai-service/routers/citation.py[m
+[36m@@ -1,9 +1,14 @@[m
+[31m-from fastapi import APIRouter[m
+[31m-from models.schemas import CitationRequest, CitationResponse[m
+[32m+[m[32mfrom fastapi import APIRouter, HTTPException[m
+[32m+[m[32mfrom models.schemas import ([m
+[32m+[m[32m    CitationRequest,[m
+[32m+[m[32m    CitationResponse,[m
+[32m+[m[32m    CitationFormatRequest,[m
+[32m+[m[32m    CitationFormatResponse,[m
+[32m+[m[32m)[m
+ from services.claim_detector import detect_claims[m
+ from services.citation_search import search_for_claim[m
+ from services.citation_ranker import rank_papers[m
+[31m-from services.citation_formatter import normalize_paper[m
+[32m+[m[32mfrom services.citation_formatter import normalize_paper, format_ieee, format_apa, format_acm[m
+ [m
+ router = APIRouter()[m
+ [m
+[36m@@ -13,7 +18,7 @@[m [masync def suggest_citations(request: CitationRequest):[m
+     claims = detect_claims(request.text)[m
+ [m
+     all_papers: dict = {}[m
+[31m-    for claim in claims[:5]:  # Limit to top 5 claims for performance[m
+[32m+[m[32m    for claim in claims[:5]:[m
+         raw_papers = search_for_claim(claim, limit=10)[m
+         ranked = rank_papers(claim, raw_papers)[m
+         for paper in ranked[:5]:[m
+[36m@@ -22,7 +27,28 @@[m [masync def suggest_citations(request: CitationRequest):[m
+                 all_papers[pid] = paper[m
+ [m
+     normalized = [normalize_paper(p) for p in list(all_papers.values())[:10]][m
+[31m-    # Re-sort by relevance_score descending[m
+[31m-    normalized.sort(key=lambda x: x["relevance_score"], reverse=True)[m
+[32m+[m[32m    normalized.sort(key=lambda x: x.get("relevance_score", 0.0), reverse=True)[m
+ [m
+     return CitationResponse(citations=normalized, claims_detected=claims)[m
+[32m+[m
+[32m+[m
+[32m+[m[32m@router.post("/format", response_model=CitationFormatResponse)[m
+[32m+[m[32masync def format_citation(request: CitationFormatRequest):[m
+[32m+[m[32m    style = (request.style or "").lower().strip()[m
+[32m+[m[32m    paper = request.source.model_dump()[m
+[32m+[m
+[32m+[m[32m    try:[m
+[32m+[m[32m        if style == "ieee":[m
+[32m+[m[32m            txt = format_ieee(paper)[m
+[32m+[m[32m        elif style == "apa":[m
+[32m+[m[32m            txt = format_apa(paper)[m
+[32m+[m[32m        elif style == "acm":[m
+[32m+[m[32m            txt = format_acm(paper)[m
+[32m+[m[32m        else:[m
+[32m+[m[32m            raise HTTPException(status_code=400, detail="Unsupported style. Use ieee, apa, acm.")[m
+[32m+[m
+[32m+[m[32m        return CitationFormatResponse(citation_text=txt, style=style)[m
+[32m+[m[32m    except HTTPException:[m
+[32m+[m[32m        raise[m
+[32m+[m[32m    except Exception as e:[m
+[32m+[m[32m        raise HTTPException(status_code=500, detail=f"Failed to format citation: {e}")[m
+\ No newline at end of file[m
+[1mdiff --git a/ai-service/routers/plagiarism.py b/ai-service/routers/plagiarism.py[m
+[1mindex 90b07a9..fca7d47 100644[m
+[1m--- a/ai-service/routers/plagiarism.py[m
+[1m+++ b/ai-service/routers/plagiarism.py[m
+[36m@@ -1,13 +1,5 @@[m
+ import re[m
+ from datetime import datetime, timezone[m
+[31m-<<<<<<< HEAD[m
+[31m-from fastapi import APIRouter[m
+[31m-from models.schemas import PlagiarismRequest, PlagiarismResponse[m
+[31m-from services.plagiarism_lexical import check_lexical[m
+[31m-from services.plagiarism_semantic import check_semantic[m
+[31m-from services.plagiarism_structural import check_structural[m
+[31m-from services.plagiarism_aggregator import build_section_result, aggregate_scores[m
+[31m-=======[m
+ from hashlib import sha256[m
+ from typing import List, Dict, Any[m
+ from fastapi import APIRouter[m
+[36m@@ -20,7 +12,6 @@[m [mfrom services.query_builder import build_query_from_text[m
+ from services.domain_topics import build_domain_query, is_domain_relevant[m
+ from services.scholarly_sources import build_multi_source_records_async[m
+ from services.runtime_cache import get_cached, set_cached[m
+[31m->>>>>>> ai-service-fix[m
+ [m
+ router = APIRouter()[m
+ [m
+[36m@@ -29,11 +20,8 @@[m [m_HEADING_RE = re.compile([m
+     re.IGNORECASE,[m
+ )[m
+ [m
+[31m-<<<<<<< HEAD[m
+[31m-=======[m
+ CACHE_TTL_SECONDS = 15 * 60  # 15 minutes[m
+ [m
+[31m->>>>>>> ai-service-fix[m
+ [m
+ def _split_sections(text: str):[m
+     """Split text into (section_title, sentences) pairs."""[m
+[36m@@ -59,20 +47,13 @@[m [mdef _split_sections(text: str):[m
+     return sections if sections else [("Document", [text])][m
+ [m
+ [m
+[31m-<<<<<<< HEAD[m
+[31m-# Placeholder reference corpus — in production this would be retrieved per-document[m
+[31m-_REFERENCE_CORPUS = [[m
+[31m-=======[m
+ _FALLBACK_CORPUS = [[m
+[31m->>>>>>> ai-service-fix[m
+     "Machine learning is a subfield of artificial intelligence.",[m
+     "Deep learning models require large amounts of training data.",[m
+     "Neural networks are inspired by the human brain.",[m
+ ][m
+ [m
+ [m
+[31m-<<<<<<< HEAD[m
+[31m-=======[m
+ def _record_to_text(r: Dict[str, Any]) -> str:[m
+     title = (r.get("title") or "").strip()[m
+     abstract = (r.get("abstract") or "").strip()[m
+[36m@@ -122,30 +103,11 @@[m [mdef _attach_evidence(section_results, records, top_k: int = 3):[m
+     return section_results[m
+ [m
+ [m
+[31m->>>>>>> ai-service-fix[m
+ @router.post("/check", response_model=PlagiarismResponse)[m
+ async def check_plagiarism(request: PlagiarismRequest):[m
+     sections = _split_sections(request.text)[m
+     section_results = [][m
+ [m
+[31m-<<<<<<< HEAD[m
+[31m-    for title, sentences in sections:[m
+[31m-        if not sentences:[m
+[31m-            continue[m
+[31m-        lex = check_lexical(sentences, _REFERENCE_CORPUS)[m
+[31m-        sem = check_semantic(sentences, _REFERENCE_CORPUS)[m
+[31m-        struct = check_structural(sentences, _REFERENCE_CORPUS)[m
+[31m-        section_results.append(build_section_result(title, sentences, lex, sem, struct))[m
+[31m-[m
+[31m-    if section_results:[m
+[31m-        overall = sum(s["overall_score"] for s in section_results) / len(section_results)[m
+[31m-    else:[m
+[31m-        overall = 0.0[m
+[31m-[m
+[31m-    severities = {"low": 0, "moderate": 1, "high": 2, "critical": 3}[m
+[31m-    rev_severities = {v: k for k, v in severities.items()}[m
+[31m-    max_sev = max((severities.get(s["severity"], 0) for s in section_results), default=0)[m
+[31m-=======[m
+     corpus: List[str] = [][m
+     records: List[Dict[str, Any]] = [][m
+     semantic_runtime = None[m
+[36m@@ -209,7 +171,6 @@[m [masync def check_plagiarism(request: PlagiarismRequest):[m
+         sum(s["overall_score"] for s in section_results) / len(section_results)[m
+         if section_results else 0.0[m
+     )[m
+[31m->>>>>>> ai-service-fix[m
+ [m
+     if overall < 0.15:[m
+         sev_label = "low"[m
+[36m@@ -225,8 +186,4 @@[m [masync def check_plagiarism(request: PlagiarismRequest):[m
+         severity=sev_label,[m
+         sections=section_results,[m
+         checked_at=datetime.now(timezone.utc).isoformat(),[m
+[31m-<<<<<<< HEAD[m
+[31m-    )[m
+[31m-=======[m
+     )[m
+[31m->>>>>>> ai-service-fix[m
+[1mdiff --git a/ai-service/services/citation_formatter.py b/ai-service/services/citation_formatter.py[m
+[1mindex ed02223..4f83183 100644[m
+[1m--- a/ai-service/services/citation_formatter.py[m
+[1m+++ b/ai-service/services/citation_formatter.py[m
+[36m@@ -14,7 +14,8 @@[m [mdef verify_doi(doi: str) -> bool:[m
+ [m
+ [m
+ def format_ieee(paper: Dict[str, Any]) -> str:[m
+[31m-    authors = ", ".join(paper.get("authors_str", [paper.get("title", "")]))[m
+[32m+[m[32m    authors_list = paper.get("authors_str") or paper.ge

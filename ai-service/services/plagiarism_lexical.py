@@ -1,9 +1,4 @@
-<<<<<<< HEAD
-from typing import List, Tuple
-import numpy as np
-=======
 from typing import List, Dict, Any
->>>>>>> ai-service-fix
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -23,20 +18,6 @@ def compute_lexical_similarity(source: str, target: str) -> float:
         return 0.0
 
 
-<<<<<<< HEAD
-def check_lexical(sentences: List[str], reference_corpus: List[str]) -> List[float]:
-    """Compute lexical similarity for each sentence against the reference corpus."""
-    scores = []
-    for sentence in sentences:
-        if not reference_corpus:
-            scores.append(0.0)
-            continue
-        max_sim = max(
-            compute_lexical_similarity(sentence, ref) for ref in reference_corpus
-        )
-        scores.append(max_sim)
-    return scores
-=======
 def check_lexical(sentences: List[str], reference_corpus: List[str]) -> List[Dict[str, Any]]:
     """
     For each sentence, return:
@@ -73,4 +54,3 @@ def check_lexical(sentences: List[str], reference_corpus: List[str]) -> List[Dic
         )
 
     return results
->>>>>>> ai-service-fix

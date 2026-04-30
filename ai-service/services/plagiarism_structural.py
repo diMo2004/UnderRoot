@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-from typing import List
-=======
 from typing import List, Dict, Any
->>>>>>> ai-service-fix
 from simhash import Simhash
 
 
@@ -27,18 +23,6 @@ def structural_similarity(text1: str, text2: str, bits: int = 64) -> float:
     return 1.0 - distance / bits
 
 
-<<<<<<< HEAD
-def check_structural(sentences: List[str], corpus: List[str]) -> List[float]:
-    """Compute structural similarity for each sentence against the reference corpus."""
-    scores = []
-    for sentence in sentences:
-        if not corpus:
-            scores.append(0.0)
-            continue
-        max_sim = max(structural_similarity(sentence, ref) for ref in corpus)
-        scores.append(max_sim)
-    return scores
-=======
 def check_structural(sentences: List[str], corpus: List[str]) -> List[Dict[str, Any]]:
     """Compute structural similarity with source index."""
     results: List[Dict[str, Any]] = []
@@ -63,4 +47,3 @@ def check_structural(sentences: List[str], corpus: List[str]) -> List[Dict[str, 
             "source_text": best_text,
         })
     return results
->>>>>>> ai-service-fix

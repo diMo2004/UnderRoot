@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-import redis from "../config/redis.js";
-=======
 import redis from "../config/redis";
->>>>>>> ai-service-fix
 
 export const cacheService = {
   async get(key: string): Promise<unknown | null> {

@@ -41,12 +41,29 @@ export interface CitationRequest {
   projectId?: string;
 }
 
+export interface SourceEvidence {
+  title?: string;
+  url?: string;
+  doi?: string;
+  year?: number;
+  provider?: string;
+}
+
 export interface PlagiarismMatch {
   matchedText: string;
-  source: string;
+  source: SourceEvidence | string;
   similarity: number;
   startIndex: number;
   endIndex: number;
+  sourceIndex?: number;
+  sourceText?: string;
+  sourceLayer?: string;
+  candidateSourceIndices?: number[];
+  topSources?: SourceEvidence[];
+
+  // heatmap
+  riskBand?: "low" | "moderate" | "high" | "critical";
+  heatmapColor?: string;
 }
 
 export interface SectionPlagiarism {
