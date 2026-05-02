@@ -6,7 +6,7 @@ from models.schemas import (
     CitationFormatResponse,
 )
 from services.claim_detector import detect_claims
-from services.citation_search import search_for_claim
+from services.citation_search import search_for_claim_async
 from services.citation_ranker import rank_papers
 from services.citation_formatter import normalize_paper, format_ieee, format_apa, format_acm
 
@@ -19,12 +19,29 @@ async def suggest_citations(request: CitationRequest):
 
     all_papers: dict = {}
     for claim in claims[:5]:
-        raw_papers = search_for_claim(claim, limit=10)
-        ranked = rank_papers(claim, raw_papers)
-        for paper in ranked[:5]:
+        raw_papers = await search_for_claim_async(claim, limit=10)
+        print("DEBUG claim:", claim)
+        print("DEBUG raw_papers:", len(raw_papers))
+        if raw_papers:
+            print("DEBUG raw_papers[0] keys:", list(raw_papers[0].keys()))
+
+        ranked = await rank_papers(claim, raw_papers)
+        print("DEBUG ranked:", len(ranked))
+
+        candidates = ranked if ranked else raw_papers
+        print("DEBUG candidates:", len(candidates))
+
+        for paper in candidates[:5]:
             pid = paper.get("paperId", "")
             if pid and pid not in all_papers:
                 all_papers[pid] = paper
+
+    print("DEBUG all_papers:", len(all_papers))
+
+    normalized = [normalize_paper(p) for p in list(all_papers.values())[:10]]
+    normalized.sort(key=lambda x: x.get("relevance_score", 0.0), reverse=True)
+
+    return CitationResponse(citations=normalized, claims_detected=claims)
 
     normalized = [normalize_paper(p) for p in list(all_papers.values())[:10]]
     normalized.sort(key=lambda x: x.get("relevance_score", 0.0), reverse=True)

@@ -6,6 +6,8 @@ import { connectMongo } from "./config/database";
 import citationRoutes from "./routes/citation.routes";
 import plagiarismRoutes from "./routes/plagiarism.routes";
 import authRoutes from "./routes/auth.routes";
+import projectRoutes from "./routes/project.routes";
+import exportRoutes from "./routes/export.routes";
 
 dotenv.config();
 
@@ -21,6 +23,8 @@ app.get("/health", (_req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/citations", citationRoutes);
 app.use("/api/plagiarism", plagiarismRoutes);
+app.use("/api/projects", projectRoutes);
+app.use("/api/export", exportRoutes);
 
 async function start() {
   await connectMongo();

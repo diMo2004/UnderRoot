@@ -1,7 +1,10 @@
 from typing import List, Dict, Any
 from sklearn.feature_extraction.text import TfidfVectorizer
 import requests
+import asyncio
+
 from config import SEMANTIC_SCHOLAR_API_KEY
+from services.scholarly_sources import build_multi_source_records_async
 
 _SS_BASE = "https://api.semanticscholar.org/graph/v1"
 _SS_FIELDS = "paperId,title,authors,year,venue,citationCount,externalIds,abstract"
@@ -17,12 +20,56 @@ def extract_keywords(claim: str, top_n: int = 5) -> str:
         return claim[:100]
 
 
+def _records_to_papers(records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Map scholarly_sources records -> SemanticScholar-like paper dict
+    so existing ranker/formatter/normalize_paper keeps working.
+    """
+    out: List[Dict[str, Any]] = []
+    for r in records:
+        title = (r.get("title") or "").strip()
+        if not title:
+            continue
+
+        src = (r.get("source") or "external").strip()
+        url = (r.get("url") or "").strip()
+        doi = (r.get("doi") or "").strip()
+
+        # make a stable-ish id for dedupe in routers/citation.py (uses paper.get("paperId"))
+        paper_id = ""
+        if doi:
+            paper_id = f"DOI:{doi.lower()}"
+        elif url:
+            paper_id = f"URL:{url.lower()}"
+        else:
+            paper_id = f"TITLE:{title.lower()}"
+
+        out.append(
+            {
+                "paperId": paper_id,
+                "title": title,
+                "authors": [],          # not available in current scholarly_sources
+                "year": r.get("year"),
+                "venue": src,           # best-effort
+                "citationCount": 0,
+                "externalIds": {"DOI": doi} if doi else {},
+                "abstract": r.get("abstract") or "",
+                "url": url,
+                "_provider": src,       # optional debug field
+            }
+        )
+    return out
+
+
 def search_papers(query: str, limit: int = 10) -> List[Dict[str, Any]]:
-    """Query Semantic Scholar for papers matching the query."""
+    """Query Semantic Scholar for papers matching the query. Fallback to OpenAlex/Crossref/arXiv."""
     headers = {}
     if SEMANTIC_SCHOLAR_API_KEY:
         headers["x-api-key"] = SEMANTIC_SCHOLAR_API_KEY
 
+    papers: List[Dict[str, Any]] = []
+
+    # 1) Try Semantic Scholar first
     try:
         resp = requests.get(
             f"{_SS_BASE}/paper/search",
@@ -31,12 +78,22 @@ def search_papers(query: str, limit: int = 10) -> List[Dict[str, Any]]:
             timeout=10,
         )
         resp.raise_for_status()
-        return resp.json().get("data", [])
+        papers = resp.json().get("data", []) or []
     except Exception:
-        return []
+        papers = []
+    return papers
+    
+async def search_papers_fallback_async(query: str, limit: int = 10) -> List[Dict[str, Any]]:
+    records = await build_multi_source_records_async(query, per_source_limit=min(limit, 15))
+    return _records_to_papers(records)[:limit]
 
-
-def search_for_claim(claim: str, limit: int = 10) -> List[Dict[str, Any]]:
-    """Extract keywords from claim and search Semantic Scholar."""
+async def search_for_claim_async(claim: str, limit: int = 10) -> List[Dict[str, Any]]:
     keywords = extract_keywords(claim)
-    return search_papers(keywords, limit=limit)
+
+    # Try S2 first (sync) — this is OK
+    papers = search_papers(keywords, limit=limit)
+    if papers:
+        return papers
+
+    # Fallback using the raw claim (better query)
+    return await search_papers_fallback_async(claim, limit=limit)

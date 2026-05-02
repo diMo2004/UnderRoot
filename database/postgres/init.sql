@@ -51,3 +51,7 @@ CREATE TABLE IF NOT EXISTS citations (
 
 CREATE INDEX IF NOT EXISTS idx_citations_project_id ON citations(project_id);
 CREATE INDEX IF NOT EXISTS idx_citations_paper_id ON citations(paper_id);
+
+ALTER TABLE citations
+ADD CONSTRAINT citations_project_paper_unique UNIQUE (project_id, paper_id);
+

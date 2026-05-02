@@ -48,6 +48,17 @@ def normalize_paper(raw: Dict[str, Any]) -> Dict[str, Any]:
     """Normalize a Semantic Scholar paper dict into our schema."""
     doi = raw.get("externalIds", {}).get("DOI")
     authors = [a.get("name", "") for a in raw.get("authors", [])]
+    paper_id = raw.get("paperId", "")
+    url = raw.get("url") or ""
+
+    if not url:
+        doi = raw.get("externalIds", {}).get("DOI")
+    if doi:
+        url = doi if doi.startswith("http") else f"https://doi.org/{doi}"
+
+    # only use semanticscholar URL for real S2 paper IDs
+    if not url and paper_id and not paper_id.startswith(("DOI:", "URL:", "TITLE:")):
+        url = f"https://www.semanticscholar.org/paper/{paper_id}"
     return {
         "paper_id": raw.get("paperId", ""),
         "title": raw.get("title", ""),
@@ -57,7 +68,7 @@ def normalize_paper(raw: Dict[str, Any]) -> Dict[str, Any]:
         "venue": raw.get("venue") or "",
         "citation_count": raw.get("citationCount") or 0,
         "relevance_score": raw.get("relevance_score", 0.0),
-        "doi": doi,
-        "url": f"https://www.semanticscholar.org/paper/{raw.get('paperId', '')}",
-        "abstract": raw.get("abstract"),
+        "doi": raw.get("externalIds", {}).get("DOI") or raw.get("doi") or "",
+        "url": raw.get("url"),
+        "abstract": raw.get("abstract")
     }

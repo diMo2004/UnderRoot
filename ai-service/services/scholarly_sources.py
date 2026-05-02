@@ -124,7 +124,7 @@ async def _fetch_openalex(client: httpx.AsyncClient, query: str, limit: int) -> 
     for w in rows:
         out.append(
             _norm_item(
-                title=w.get("display_name") or "",
+                title=w.get("title") or w.get("display_name") or "",
                 abstract="",  # optional: parse abstract_inverted_index
                 url=w.get("id") or "",
                 doi=w.get("doi") or "",

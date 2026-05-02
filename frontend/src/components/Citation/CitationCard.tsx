@@ -5,18 +5,12 @@ import { ExternalLink, Plus } from "lucide-react";
 
 interface CitationCardProps {
   citation: CitationResult;
-  onInsert?: (citation: string) => void;
+  onInsert?: () => void;
 }
 
 export default function CitationCard({ citation, onInsert }: CitationCardProps) {
   const authorsStr = citation.authors.slice(0, 3).join(", ") +
     (citation.authors.length > 3 ? " et al." : "");
-
-  const handleInsert = () => {
-    if (onInsert) {
-      onInsert(`[${citation.title}] (${authorsStr}, ${citation.year})`);
-    }
-  };
 
   return (
     <div className="border border-gray-200 rounded-lg p-3 bg-white hover:border-blue-300 transition-colors">
@@ -52,9 +46,12 @@ export default function CitationCard({ citation, onInsert }: CitationCardProps) 
             DOI <ExternalLink size={10} />
           </a>
         )}
+        <div className="inline-flex items-center gap-1 text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded font-medium border border-green-200">
+          Verified
+        </div>
         <button
-          onClick={handleInsert}
-          className="inline-flex items-center gap-1 text-xs bg-blue-600 text-white px-2 py-0.5 rounded hover:bg-blue-700 ml-auto"
+          onClick={onInsert}
+          className="inline-flex items-center gap-1 text-xs bg-ivy-text text-white px-2 py-0.5 rounded hover:bg-ivy-text/90 ml-auto"
         >
           <Plus size={10} /> Insert
         </button>

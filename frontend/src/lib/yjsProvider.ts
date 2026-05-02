@@ -1,9 +1,13 @@
 import * as Y from "yjs";
 import { HocuspocusProvider } from "@hocuspocus/provider";
+import { IndexeddbPersistence } from "y-indexeddb";
 
 export function createYjsProvider(projectId: string, userName: string, userColor: string) {
   const ydoc = new Y.Doc();
 
+  // Offline persistence
+  const persistence = new IndexeddbPersistence(`underroot-project-${projectId}`, ydoc);
+  
   const token =
     typeof window !== "undefined"
       ? localStorage.getItem("underroot_token") || ""
@@ -21,5 +25,5 @@ export function createYjsProvider(projectId: string, userName: string, userColor
     color: userColor,
   });
 
-  return { ydoc, provider };
+  return { ydoc, provider, persistence };
 }
