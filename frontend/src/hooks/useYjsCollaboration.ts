@@ -3,7 +3,6 @@
 import { useEffect, useState, useRef } from "react";
 import * as Y from "yjs";
 import { HocuspocusProvider } from "@hocuspocus/provider";
-import { IndexeddbPersistence } from "y-indexeddb";
 import { createYjsProvider } from "@/lib/yjsProvider";
 
 interface ConnectedUser {
@@ -21,13 +20,11 @@ export function useYjsCollaboration(
   const [connectedUsers, setConnectedUsers] = useState<ConnectedUser[]>([]);
   const ydocRef = useRef<Y.Doc | null>(null);
   const providerRef = useRef<HocuspocusProvider | null>(null);
-  const persistenceRef = useRef<IndexeddbPersistence | null>(null);
 
   useEffect(() => {
-    const { ydoc, provider, persistence } = createYjsProvider(projectId, userName, userColor);
+    const { ydoc, provider } = createYjsProvider(projectId, userName, userColor);
     ydocRef.current = ydoc;
     providerRef.current = provider;
-    persistenceRef.current = persistence;
 
     provider.on("connect", () => setIsConnected(true));
     provider.on("disconnect", () => setIsConnected(false));
@@ -46,7 +43,6 @@ export function useYjsCollaboration(
 
     return () => {
       provider.destroy();
-      persistence.destroy();
       ydoc.destroy();
     };
   }, [projectId, userName, userColor]);

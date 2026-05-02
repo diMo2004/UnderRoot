@@ -33,7 +33,7 @@ export default function TiptapEditor({
       StarterKit.configure({ history: false }),
       Collaboration.configure({ document: ydoc }),
       CollaborationCursor.configure({ provider }),
-      Placeholder.configure({ placeholder: "The canvas for serious research. Start writing…" }),
+      Placeholder.configure({ placeholder: "Start writing your research paper…" }),
       Table.configure({ resizable: true }),
       TableRow,
       TableCell,
@@ -43,7 +43,7 @@ export default function TiptapEditor({
     editorProps: {
       attributes: {
         class:
-          "prose prose-sm md:prose-base lg:prose-lg xl:prose-xl max-w-none focus:outline-none min-h-[1000px] py-12 px-8 md:px-16 lg:px-20 font-serif leading-relaxed text-ivy-text",
+          "prose prose-lg max-w-none focus:outline-none min-h-[calc(100vh-200px)] p-8",
       },
     },
     onUpdate({ editor }) {
@@ -59,11 +59,9 @@ export default function TiptapEditor({
   }, [editor, onEditorReady]);
 
   return (
-    <div className="flex flex-col bg-white shadow-[0_20px_50px_rgba(0,0,0,0.08)] rounded-xl overflow-hidden min-h-screen">
+    <div className="flex flex-col border border-gray-200 rounded-lg overflow-hidden bg-white">
       {editor && <MenuBar editor={editor} />}
-      <div className="flex-1">
-        <EditorContent editor={editor} />
-      </div>
+      <EditorContent editor={editor} />
     </div>
   );
 }

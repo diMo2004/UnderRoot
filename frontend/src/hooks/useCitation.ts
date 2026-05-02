@@ -14,33 +14,31 @@ export function useCitation() {
     setError(null);
     try {
       const response = await citationAPI.suggest(text, projectId);
-      
-      // Fallback for both old and new API response shapes based on the merge conflict history
-      const citations = response.data.citations || response.data?.data?.citations;
-      if (citations) {
-        setResults(citations as CitationResult[]);
-      } else if (response.data.success === false) {
-        setError(response.data.error?.message || "Failed to fetch citations");
+<<<<<<< HEAD
+      const payload = response.data;
+
+      if (!payload.success) {
+        setError(payload.error.message);
         setResults([]);
-      } else {
-        setResults([]);
+        return;
       }
+
+      setResults((payload.data?.citations as CitationResult[]) || []);
+    } catch {
+      setError("Failed to fetch citations");
+=======
+      setResults(response.data.citations || []);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to fetch citations");
+>>>>>>> ai-service-fix
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const formatCitation = useCallback(async (source: CitationResult, style: string) => {
-    try {
-      const response = await citationAPI.format(source, style);
-      return response.data.citation_text;
-    } catch (err: unknown) {
-      console.error("Format citation error:", err);
-      return `[Citation Error: ${err instanceof Error ? err.message : 'Unknown'}]`;
-    }
-  }, []);
-
-  return { suggestCitations, formatCitation, results, loading, error };
+  return { suggestCitations, results, loading, error };
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> ai-service-fix

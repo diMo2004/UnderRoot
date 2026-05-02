@@ -31,11 +31,16 @@ export const projectAPI = {
 };
 
 export const citationAPI = {
-  suggest: (text: string, projectId?: string) => api.post("/citations/suggest", { text, projectId }),
-  add: (payload: { projectId: string; source: any; template?: string }) => api.post("/citations/add", payload),
-  bibliography: (projectId: string, template?: string) =>
-    api.get(`/citations/project/${projectId}`, { params: template ? { template } : {} }),
-  format: (source: any, style: string) => api.post("/citations/format", { source, style }),
+  suggest: (text: string, projectId?: string) =>
+    api.post("/api/citations/suggest", { text, projectId }),
+
+  // NEW: format a selected source into a citation string
+  // Backend endpoint you should add: POST /api/citations/format
+  format: (payload: {
+    style: "ieee" | "apa" | "acm";
+    source: { title?: string; url?: string; doi?: string; year?: number; provider?: string };
+    index?: number;
+  }) => api.post("/api/citations/format", { index: 1, ...payload }),
 };
 
 export const plagiarismAPI = {
@@ -46,8 +51,6 @@ export const plagiarismAPI = {
 export const summaryAPI = {
   generate: (text: string, projectId?: string) =>
     api.post("/api/summary/generate", { text, projectId }),
-  mindmap: (text: string, projectId?: string) =>
-    api.post("/api/mindmap/generate", { text, projectId }),
 };
 
 export const exportAPI = {
