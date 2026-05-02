@@ -1,19 +1,33 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import { useParams } from "next/navigation";
+import { useCallback, useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { Editor } from "@tiptap/react";
 import { useYjsCollaboration } from "@/hooks/useYjsCollaboration";
 import TiptapEditor from "@/components/Editor/TiptapEditor";
 import CitationPanel from "@/components/Citation/CitationPanel";
 import PlagiarismPanel from "@/components/Plagiarism/PlagiarismPanel";
+import MindMapPanel from "@/components/Editor/MindMapPanel";
+import ExportPanel from "@/components/Editor/ExportPanel";
 import { PlagiarismMatch } from "@/types";
-import { BookOpen, ShieldCheck, Download, Wifi, WifiOff } from "lucide-react";
+import { 
+  BookOpen, 
+  ShieldCheck, 
+  Download, 
+  Wifi, 
+  WifiOff, 
+  ChevronLeft,
+  Users,
+  Share2,
+  Network
+} from "lucide-react";
+import Link from "next/link";
 
-type Sidebar = "citation" | "plagiarism" | null;
+type Sidebar = "citation" | "plagiarism" | "mindmap" | "export" | null;
 
 export default function EditorPage() {
   const params = useParams();
+  const router = useRouter();
   const projectId = params.projectId as string;
   const [sidebar, setSidebar] = useState<Sidebar>(null);
   const [plainText, setPlainText] = useState("");
@@ -21,8 +35,8 @@ export default function EditorPage() {
 
   const { ydoc, provider, isConnected, connectedUsers } = useYjsCollaboration(
     projectId,
-    "Anonymous",
-    "#4f86f7"
+    "Researcher", // Could be dynamic from auth
+    "#A68253"
   );
 
   const toggleSidebar = (panel: Sidebar) =>
@@ -73,91 +87,147 @@ export default function EditorPage() {
         console.warn("Editor not ready; cannot insert citation yet.");
         return;
       }
-      editorInstance.chain().focus().insertContent(` (${citationText}) `).run();
+      editorInstance.chain().focus().insertContent(` ${citationText} `).run();
     },
     [editorInstance]
   );
 
   if (!ydoc || !provider) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500">Connecting to collaboration server…</p>
+      <div className="min-h-screen flex items-center justify-center bg-ivy-bg">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-ivy-accent border-t-transparent rounded-full animate-spin" />
+          <p className="text-ivy-text/60 font-medium">Connecting to collaboration server…</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
-      <header className="flex items-center justify-between px-4 py-2 bg-white border-b border-gray-200 shadow-sm">
-        <div className="flex items-center gap-3">
-          <span className="text-xl font-bold text-gray-900">📝 UnderRoot</span>
-          <div className="flex items-center gap-1 text-xs text-gray-500">
-            {isConnected ? (
-              <>
-                <Wifi size={12} className="text-green-500" />
-                <span className="text-green-600">Connected</span>
-              </>
-            ) : (
-              <>
-                <WifiOff size={12} className="text-red-400" />
-                <span className="text-red-500">Disconnected</span>
-              </>
-            )}
+    <div className="min-h-screen flex flex-col bg-ivy-bg text-ivy-text selection:bg-ivy-accent/20">
+      {/* Premium Header */}
+      <header className="flex items-center justify-between px-6 py-3 bg-white/80 backdrop-blur-md border-b border-ivy-text/5 sticky top-0 z-50">
+        <div className="flex items-center gap-6">
+          <Link 
+            href="/dashboard"
+            className="p-2 hover:bg-ivy-text/5 rounded-full transition-colors text-ivy-text/60 hover:text-ivy-text"
+          >
+            <ChevronLeft size={20} />
+          </Link>
+          <div className="flex flex-col">
+            <h1 className="text-sm font-bold tracking-tight">UnderRoot <span className="text-ivy-accent/60 font-normal ml-1">/ Research Paper</span></h1>
+            <div className="flex items-center gap-2 mt-0.5">
+              <div className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-400'}`} />
+              <span className="text-[10px] font-bold uppercase tracking-wider text-ivy-text/40">
+                {isConnected ? 'Live Syncing' : 'Offline Mode'}
+              </span>
+            </div>
           </div>
-          <div className="flex items-center gap-1">
+        </div>
+
+        <div className="flex items-center gap-4">
+          {/* Presence UI */}
+          <div className="flex items-center -space-x-2 mr-4">
             {connectedUsers.map((user) => (
               <div
                 key={user.clientId}
                 title={user.name}
-                className="w-6 h-6 rounded-full flex items-center justify-center text-xs text-white font-semibold"
+                className="w-8 h-8 rounded-full border-2 border-white flex items-center justify-center text-[10px] text-white font-bold transition-transform hover:scale-110 cursor-pointer"
                 style={{ backgroundColor: user.color }}
               >
-                {user.name[0]?.toUpperCase()}
+                {user.name?.[0]?.toUpperCase() || "R"}
               </div>
             ))}
+            {connectedUsers.length > 0 && (
+              <div className="w-8 h-8 rounded-full border-2 border-white bg-ivy-text/5 flex items-center justify-center text-[10px] text-ivy-text/40 font-bold ml-1">
+                <Users size={12} />
+              </div>
+            )}
           </div>
-        </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => toggleSidebar("citation")}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              sidebar === "citation"
-                ? "bg-blue-100 text-blue-700"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            }`}
-          >
-            <BookOpen size={14} /> Cite
-          </button>
-          <button
-            onClick={() => toggleSidebar("plagiarism")}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              sidebar === "plagiarism"
-                ? "bg-purple-100 text-purple-700"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            }`}
-          >
-            <ShieldCheck size={14} /> Plagiarism
-          </button>
-          <button className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200">
-            <Download size={14} /> Export
+          <button className="flex items-center gap-2 px-4 py-2 bg-ivy-text text-white rounded-lg text-xs font-bold hover:bg-ivy-text/90 transition-all shadow-sm">
+            <Share2 size={14} /> Share
           </button>
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden">
-        <div className="flex-1 overflow-auto p-4">
-          <TiptapEditor
-            ydoc={ydoc}
-            provider={provider}
-            onTextChange={setPlainText}
-            onEditorReady={setEditorInstance}
-          />
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* Main Editor Area */}
+        <div className="flex-1 overflow-auto flex justify-center p-8 bg-[#F5F2EA]/30">
+          <div className="w-full max-w-4xl">
+            <TiptapEditor
+              ydoc={ydoc}
+              provider={provider}
+              onTextChange={setPlainText}
+              onEditorReady={setEditorInstance}
+            />
+          </div>
         </div>
 
+        {/* Floating Tool Sidebar */}
+        <div className="fixed right-8 bottom-8 flex flex-col gap-3 z-40">
+          <button
+            onClick={() => toggleSidebar("mindmap")}
+            className={`w-12 h-12 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 ${
+              sidebar === "mindmap"
+                ? "bg-ivy-accent text-white scale-110"
+                : "bg-white text-ivy-text hover:bg-ivy-text hover:text-white"
+            }`}
+          >
+            <Network size={20} />
+          </button>
+          <button
+            onClick={() => toggleSidebar("citation")}
+            className={`w-12 h-12 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 ${
+              sidebar === "citation"
+                ? "bg-ivy-accent text-white scale-110"
+                : "bg-white text-ivy-text hover:bg-ivy-text hover:text-white"
+            }`}
+          >
+            <BookOpen size={20} />
+          </button>
+          <button
+            onClick={() => toggleSidebar("plagiarism")}
+            className={`w-12 h-12 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 ${
+              sidebar === "plagiarism"
+                ? "bg-ivy-text text-white scale-110"
+                : "bg-white text-ivy-text hover:bg-ivy-text hover:text-white"
+            }`}
+          >
+            <ShieldCheck size={20} />
+          </button>
+          <button 
+            onClick={() => toggleSidebar("export")}
+            className={`w-12 h-12 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 ${
+              sidebar === "export"
+                ? "bg-ivy-accent text-white scale-110"
+                : "bg-white text-ivy-text hover:bg-ivy-text hover:text-white"
+            }`}
+          >
+            <Download size={20} />
+          </button>
+        </div>
+
+        {/* Drawer Sidebars */}
         {sidebar && (
-          <aside className="w-80 border-l border-gray-200 bg-white overflow-auto flex-shrink-0">
-            {sidebar === "citation" && <CitationPanel projectId={projectId} />}
+          <aside className="absolute right-0 top-0 bottom-0 w-[400px] bg-white border-l border-ivy-text/5 shadow-[-20px_0_40px_rgba(0,0,0,0.05)] z-50 overflow-auto animate-in slide-in-from-right duration-300">
+            <div className="p-4 flex items-center justify-between border-b border-ivy-text/5">
+              <h3 className="font-bold text-sm uppercase tracking-widest text-ivy-text/40">
+                {sidebar === "citation" ? "Citation Assistant" : 
+                 sidebar === "plagiarism" ? "Plagiarism Guard" : 
+                 sidebar === "mindmap" ? "Structural Mapping" : 
+                 "Export Paper"}
+              </h3>
+              <button 
+                onClick={() => setSidebar(null)}
+                className="p-1 hover:bg-ivy-text/5 rounded-full"
+              >
+                <ChevronLeft size={18} className="rotate-180" />
+              </button>
+            </div>
+            {sidebar === "citation" && <CitationPanel projectId={projectId} onInsert={insertCitationIntoEditor} />}
+            {sidebar === "mindmap" && <MindMapPanel text={plainText} projectId={projectId} />}
+            {sidebar === "export" && <ExportPanel title="Research Paper" content={plainText} projectId={projectId} />}
             {sidebar === "plagiarism" && (
               <PlagiarismPanel
                 text={plainText}

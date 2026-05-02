@@ -23,18 +23,23 @@ services:
       - REDIS_URL=redis://redis:6379
       - AI_SERVICE_URL=http://ai-service:8000
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - JWT_SECRET=${JWT_SECRET}
     depends_on:
       - postgres
       - mongo
       - redis
+      - ai-service
 
   ai-service:
     build: ./ai-service
     ports:
       - "8000:8000"
     environment:
+      - HF_TOKEN=${HF_TOKEN}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - SEMANTIC_SCHOLAR_API_KEY=${SEMANTIC_SCHOLAR_API_KEY}
+    volumes:
+      - hf_cache:/root/.cache/huggingface
     depends_on:
       - redis
 
@@ -68,3 +73,4 @@ volumes:
   postgres_data:
   mongo_data:
   redis_data:
+  hf_cache:
