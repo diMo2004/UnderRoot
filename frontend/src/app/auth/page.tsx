@@ -26,7 +26,7 @@ export default function SignInPage() {
   const [authBtnHover, setAuthBtnHover] = useState(false);
   const [googleLoaded, setGoogleLoaded] = useState(false);
 
-  const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
+  const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
 
   const theme = {
     bg: '#FCFBF7',

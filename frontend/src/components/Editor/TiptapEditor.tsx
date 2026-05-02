@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
-import { useEditor, EditorContent, Editor } from "@tiptap/react";
+import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Collaboration from "@tiptap/extension-collaboration";
 import CollaborationCursor from "@tiptap/extension-collaboration-cursor";
@@ -18,16 +17,9 @@ import MenuBar from "./MenuBar";
 interface TiptapEditorProps {
   ydoc: Y.Doc;
   provider: HocuspocusProvider;
-  onTextChange?: (text: string) => void;
-  onEditorReady?: (editor: Editor) => void;
 }
 
-export default function TiptapEditor({
-  ydoc,
-  provider,
-  onTextChange,
-  onEditorReady,
-}: TiptapEditorProps) {
+export default function TiptapEditor({ ydoc, provider }: TiptapEditorProps) {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({ history: false }),
@@ -46,17 +38,7 @@ export default function TiptapEditor({
           "prose prose-lg max-w-none focus:outline-none min-h-[calc(100vh-200px)] p-8",
       },
     },
-    onUpdate({ editor }) {
-      onTextChange?.(editor.getText());
-    },
-    onCreate({ editor }) {
-      onTextChange?.(editor.getText());
-    },
   });
-
-  useEffect(() => {
-    if (editor) onEditorReady?.(editor);
-  }, [editor, onEditorReady]);
 
   return (
     <div className="flex flex-col border border-gray-200 rounded-lg overflow-hidden bg-white">
