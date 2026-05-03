@@ -46,49 +46,33 @@ function heatBg(score: number): string {
 }
 
 async function runPlagiarismCheck(text: string): Promise<PlagiarismResult[]> {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1000,
-      messages: [{
-        role: "user",
-        content: `You are an academic plagiarism detector. Split the following text into individual sentences. For each sentence estimate a plagiarism similarity score (0-100) based on how generic, commonly-used, or potentially copied the phrasing appears in academic literature. Suggest a plausible fictional source journal/paper name if score > 40. Return ONLY valid JSON array, no markdown:
-[{"sentence":"...","score":42,"source":"Journal of X (2022)"},...]
-
-TEXT:
-${text}`,
-      }],
-    }),
-  });
-  const data = await res.json();
-  const raw = data.content?.map((c: { text?: string }) => c.text || "").join("");
-  try { return JSON.parse(raw.replace(/```json|```/g, "").trim()) as PlagiarismResult[]; }
-  catch { return []; }
+  try {
+    const res = await fetch("/api/ai/plagiarism/check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+    const data = await res.json();
+    return data.results || data;
+  } catch (err) {
+    console.error("Plagiarism check error:", err);
+    throw err;
+  }
 }
 
 async function runMindmap(text: string): Promise<MindNode> {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1000,
-      messages: [{
-        role: "user",
-        content: `You are an academic mind-map generator. Analyse the text and produce a hierarchical mind map: root node (main topic), up to 5 branch nodes (key themes), up to 3 leaf nodes per branch (sub-concepts). Return ONLY valid JSON, no markdown:
-{"id":"root","label":"Main Topic","children":[{"id":"b1","label":"Theme","children":[{"id":"l1","label":"Sub-concept","children":[]}]}]}
-
-TEXT:
-${text}`,
-      }],
-    }),
-  });
-  const data = await res.json();
-  const raw = data.content?.map((c: { text?: string }) => c.text || "").join("");
-  try { return JSON.parse(raw.replace(/```json|```/g, "").trim()) as MindNode; }
-  catch { return { id: "root", label: "Main Topic", children: [] }; }
+  try {
+    const res = await fetch("/api/ai/mindmap/json", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+    const data = await res.json();
+    return data;
+  } catch (err) {
+    console.error("Mindmap error:", err);
+    throw err;
+  }
 }
 
 function layoutTree(node: MindNode, x: number, y: number, depth: number): MindNode {

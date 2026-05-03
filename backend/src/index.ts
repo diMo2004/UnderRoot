@@ -8,6 +8,7 @@ import plagiarismRoutes from "./routes/plagiarism.routes";
 import authRoutes from "./routes/auth.routes";
 import projectRoutes from "./routes/project.routes";
 import exportRoutes from "./routes/export.routes";
+import aiRoutes from "./routes/ai.routes";
 
 dotenv.config();
 
@@ -25,6 +26,7 @@ app.use("/api/citations", citationRoutes);
 app.use("/api/plagiarism", plagiarismRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/export", exportRoutes);
+app.use("/api/ai", aiRoutes);
 
 async function start() {
   await connectMongo();

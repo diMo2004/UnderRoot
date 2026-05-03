@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from models.schemas import SummaryRequest
-from services.mindmap import generate_mermaid_mindmap
+from services.mindmap import generate_mermaid_mindmap, generate_json_mindmap
 
 router = APIRouter()
 
@@ -8,3 +8,7 @@ router = APIRouter()
 async def get_mindmap(request: SummaryRequest):
     mermaid_code = generate_mermaid_mindmap(request.text)
     return {"mermaid": mermaid_code}
+
+@router.post("/json")
+async def get_mindmap_json(request: SummaryRequest):
+    return generate_json_mindmap(request.text)
