@@ -130,13 +130,13 @@ export default function SignInPage() {
     }));
     // Send token to your backend here:
     // await fetch('/api/auth/google', { method: 'POST', body: JSON.stringify({ token: response.credential }) })
-    window.location.href = '/scriptorium';
+    window.location.href = '/dashboard';
   };
 
   const handleSignIn = (e: React.FormEvent) => {
     e.preventDefault();
     if (credentials.email && credentials.fullName) {
-      window.location.href = '/scriptorium';
+      window.location.href = '/dashboard';
     }
   };
 

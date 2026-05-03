@@ -46,14 +46,32 @@ function heatBg(score: number): string {
 }
 
 async function runPlagiarismCheck(text: string): Promise<PlagiarismResult[]> {
+  console.log("Starting plagiarism check for text:", text.slice(0, 50) + "...");
   try {
-    const res = await fetch("/api/ai/plagiarism/check", {
+    const baseUrl = typeof window !== "undefined" ? "http://localhost:4000" : "";
+    const res = await fetch(`${baseUrl}/api/ai/plagiarism/check`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text }),
     });
-    const data = await res.json();
-    return data.results || data;
+    console.log("Plagiarism check response status:", res.status);
+    
+    const contentType = res.headers.get("content-type");
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error("Server returned error:", errorText);
+      throw new Error(`Server error: ${res.status}`);
+    }
+
+    if (contentType && contentType.includes("application/json")) {
+      const data = await res.json();
+      console.log("Plagiarism check data received:", data);
+      return data.results || data;
+    } else {
+      const textResult = await res.text();
+      console.error("Expected JSON but got:", textResult.slice(0, 500));
+      throw new Error("Invalid response format");
+    }
   } catch (err) {
     console.error("Plagiarism check error:", err);
     throw err;

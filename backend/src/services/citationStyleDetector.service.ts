@@ -15,6 +15,9 @@ export type CitationStyle = "apa" | "ieee" | "mla" | "unknown";
 export function detectCitationStyleFromTemplate(template?: string): CitationStyle {
   if (!template) return "unknown";
   const t = template.toLowerCase();
+  if (t.includes("apa")) return "apa";
+  if (t.includes("ieee")) return "ieee";
+  if (t.includes("mla")) return "mla";
 
   // IEEE: numbered brackets
   if (/\[\s*\d+\s*\]/.test(template)) return "ieee";

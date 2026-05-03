@@ -7,19 +7,27 @@ const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://ai-service:8000";
 // Proxy for plagiarism check
 router.post("/plagiarism/check", async (req, res) => {
   try {
-    const response = await axios.post(`${AI_SERVICE_URL}/api/plagiarism/check`, req.body);
+    console.log(`Proxying plagiarism check to AI service (${AI_SERVICE_URL}). Body size: ${JSON.stringify(req.body).length}`);
+    const response = await axios.post(`${AI_SERVICE_URL}/api/plagiarism/check`, req.body, {
+      timeout: 120000 // 2 minutes
+    });
     const data = response.data;
+    console.log("AI Service response received. Sections count:", data.sections?.length);
     
     // Flatten sections into a single list of results for the Analysis Suite
     if (data.sections) {
       const flattened = data.sections.flatMap((section: any) => 
         section.matches.map((m: any) => ({
-          sentence: m.sentence,
-          score: Math.round(m.score * 100), // Convert 0-1 to 0-100
+          sentence: m.matched_text || "Unidentified sentence",
+          score: Math.round((m.similarity || 0) * 100), // Ensure no NaN
           source: m.source?.title || "Academic Source"
         }))
       );
-      return res.json(flattened);
+      console.log("Flattened results count:", flattened.length);
+      console.log("Sending JSON response to frontend...");
+      res.json(flattened);
+      console.log("JSON response sent successfully.");
+      return;
     }
     
     res.json(data);

@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { projectAPI } from '@/lib/api';
 import {
   Feather, ShieldCheck, Users, Search,
   MessageSquare, Settings, Share2,
@@ -11,6 +12,7 @@ import {
   RefreshCw, Download, Copy, ZapIcon,
   ScanSearch
 } from 'lucide-react';
+import TipTap from '@/components/Editor/TipTap';
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 
@@ -18,8 +20,8 @@ const FORMATS = {
   IEEE: {
     label: "IEEE",
     description: "Numbered references, technical journals",
-    inText: (id) => `[${id}]`,
-    bibliography: (c, id) => `[${id}] ${c.author}, "${c.title}," ${c.source}, ${c.year}.`,
+    inText: (id: any) => `[${id}]`,
+    bibliography: (c: any, id: any) => `[${id}] ${c.author}, "${c.title}," ${c.source}, ${c.year}.`,
     bodyFont: "'Times New Roman', serif",
     fontSize: "16px",
     lineHeight: "1.6",
@@ -29,8 +31,8 @@ const FORMATS = {
   APA: {
     label: "APA",
     description: "Author-date style, social sciences",
-    inText: (_, c) => `(${c.author.split(",")[0]}, ${c.year})`,
-    bibliography: (c) => `${c.author} (${c.year}). ${c.title}. ${c.source}.`,
+    inText: (_: any, c: any) => `(${c.author.split(",")[0]}, ${c.year})`,
+    bibliography: (c: any) => `${c.author} (${c.year}). ${c.title}. ${c.source}.`,
     bodyFont: "'Georgia', serif",
     fontSize: "18px",
     lineHeight: "2",
@@ -40,8 +42,8 @@ const FORMATS = {
   ACM: {
     label: "ACM",
     description: "Superscript refs, computing",
-    inText: (id) => `[${id}]`,
-    bibliography: (c, id) => `${id}. ${c.author} ${c.year}. ${c.title}. ${c.source}.`,
+    inText: (id: any) => `[${id}]`,
+    bibliography: (c: any, id: any) => `${id}. ${c.author} ${c.year}. ${c.title}. ${c.source}.`,
     bodyFont: "'Palatino Linotype', serif",
     fontSize: "17px",
     lineHeight: "1.75",
@@ -97,8 +99,8 @@ function LoadingDots() {
   );
 }
 
-function CitationCard({ cite, format, onInsert, hovered, onHover }) {
-  const fmt = FORMATS[format];
+function CitationCard({ cite, format, onInsert, hovered, onHover }: any) {
+  const fmt = (FORMATS as any)[format];
   const bib = fmt.bibliography(cite, cite.id);
   return (
     <div
@@ -139,12 +141,12 @@ function CitationCard({ cite, format, onInsert, hovered, onHover }) {
   );
 }
 
-function AICitationPanel({ paragraphs, insertedCitations, format, onInsert }) {
+function AICitationPanel({ editor, insertedCitations, format, onInsert }: any) {
   const [query, setQuery] = useState('');
   const [aiSuggestions, setAiSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [hoveredCite, setHoveredCite] = useState(null);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('suggested');
 
   const searchCitations = useCallback(async () => {
@@ -153,7 +155,7 @@ function AICitationPanel({ paragraphs, insertedCitations, format, onInsert }) {
     setError(null);
     setAiSuggestions([]);
     try {
-      const docText = paragraphs.map(p => p.text).join('\n\n');
+      const docText = editor?.getText() || "";
       const prompt = `You are a scholarly citation assistant. Given this academic text:
 "${docText}"
 
@@ -174,13 +176,13 @@ Return ONLY a JSON array of 3 citation objects with these fields: author, year (
       const raw = data.content?.[0]?.text || '[]';
       const clean = raw.replace(/```json|```/g, '').trim();
       const parsed = JSON.parse(clean);
-      setAiSuggestions(parsed.map((c, i) => ({ ...c, id: 100 + i, verified: true })));
+      setAiSuggestions(parsed.map((c: any, i: number) => ({ ...c, id: 100 + i, verified: true })));
     } catch (e) {
       setError('Could not fetch AI suggestions. Please try again.');
     } finally {
       setLoading(false);
     }
-  }, [query, paragraphs]);
+  }, [query, editor]);
 
   const allCites = activeTab === 'suggested' ? MOCK_CITATIONS : aiSuggestions;
 
@@ -263,9 +265,9 @@ Return ONLY a JSON array of 3 citation objects with these fields: author, year (
       {insertedCitations.length > 0 && (
         <div style={{ marginTop: 8, paddingTop: 16, borderTop: `1px solid ${s.border}` }}>
           <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', opacity: 0.5, marginBottom: 10 }}>Inserted Bibliography</div>
-          {insertedCitations.map((c, i) => (
+          {insertedCitations.map((c: any, i: number) => (
             <div key={c.id} style={{ fontSize: 10, padding: '6px 0', borderBottom: `1px solid ${s.border}`, lineHeight: 1.5, opacity: 0.7 }}>
-              {FORMATS[format].bibliography(c, i + 1)}
+              {(FORMATS as any)[format].bibliography(c, i + 1)}
             </div>
           ))}
         </div>
@@ -274,11 +276,11 @@ Return ONLY a JSON array of 3 citation objects with these fields: author, year (
   );
 }
 
-function FormattingPanel({ format, setFormat, paragraphs, setParagraphs }) {
+function FormattingPanel({ format, setFormat, editor }: any) {
   const [applying, setApplying] = useState(false);
   const [applied, setApplied] = useState(false);
 
-  const applyFormat = async (fmt) => {
+  const applyFormat = async (fmt: any) => {
     setApplying(true);
     setApplied(false);
     await new Promise(r => setTimeout(r, 800));
@@ -291,7 +293,7 @@ function FormattingPanel({ format, setFormat, paragraphs, setParagraphs }) {
   const reformatWithAI = async () => {
     setApplying(true);
     try {
-      const docText = paragraphs.map(p => p.text).join('\n\n');
+      const docText = editor?.getText() || "";
       const resp = await fetch(ANTHROPIC_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -306,10 +308,9 @@ function FormattingPanel({ format, setFormat, paragraphs, setParagraphs }) {
       });
       const data = await resp.json();
       const text = data.content?.[0]?.text || '';
-      const newParas = text.split(/\n\n+/).filter(Boolean).map((t, i) => ({
-        id: `p${i + 1}`, text: t.trim(), insertedCitations: [],
-      }));
-      if (newParas.length > 0) setParagraphs(newParas);
+      if (text) {
+        editor.commands.setContent(text);
+      }
     } catch (e) {}
     setApplying(false);
   };
@@ -345,7 +346,7 @@ function FormattingPanel({ format, setFormat, paragraphs, setParagraphs }) {
       <div style={{ marginTop: 8, paddingTop: 16, borderTop: `1px solid ${s.border}` }}>
         <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', opacity: 0.5, marginBottom: 12 }}>AI Reformat</div>
         <p style={{ fontSize: 11, opacity: 0.6, marginBottom: 12, lineHeight: 1.6 }}>
-          Use AI to rewrite the text to match the conventions of {FORMATS[format].label} style (passive voice, conciseness, structure).
+          Use AI to rewrite the text to match the conventions of {(FORMATS as any)[format].label} style (passive voice, conciseness, structure).
         </p>
         <button
           onClick={reformatWithAI}
@@ -379,7 +380,7 @@ function FormattingPanel({ format, setFormat, paragraphs, setParagraphs }) {
   );
 }
 
-function CollaborationPanel({ collaborators, paragraphs, setParagraphs }) {
+function CollaborationPanel({ collaborators, editor }: any) {
   const [comment, setComment] = useState('');
   const [comments, setComments] = useState([
     { id: 1, user: 'Alice Chen', color: '#1A2F23', text: 'Should we add more context about CRDT here?', time: '2m ago', para: 'p2' },
@@ -403,7 +404,7 @@ function CollaborationPanel({ collaborators, paragraphs, setParagraphs }) {
     setTimeout(() => setInviteSent(false), 2500);
   };
 
-  const removeInvite = (email) => setPendingInvites(prev => prev.filter(i => i.email !== email));
+  const removeInvite = (email: string) => setPendingInvites(prev => prev.filter((i: any) => i.email !== email));
 
   const addComment = () => {
     if (!comment.trim()) return;
@@ -418,7 +419,7 @@ function CollaborationPanel({ collaborators, paragraphs, setParagraphs }) {
     setAiAssisting(true);
     setAiSuggestion(null);
     try {
-      const docText = paragraphs.map(p => p.text).join('\n\n');
+      const docText = editor?.getText() || "";
       const allComments = comments.map(c => `- ${c.user}: ${c.text}`).join('\n');
       const resp = await fetch(ANTHROPIC_API_URL, {
         method: 'POST',
@@ -464,7 +465,7 @@ Provide ONE concise, actionable suggestion (2-3 sentences max) to improve the pa
           </button>
         </div>
 
-        {collaborators.map((col, i) => (
+        {collaborators.map((col: any, i: number) => (
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: `1px solid ${s.border}` }}>
             <div style={{ width: 28, height: 28, borderRadius: '50%', background: col.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: '#fff', fontWeight: 700 }}>{col.initials}</div>
             <div>
@@ -590,9 +591,9 @@ Provide ONE concise, actionable suggestion (2-3 sentences max) to improve the pa
   );
 }
 
-function IntegrityPanel({ paragraphs }) {
+function IntegrityPanel({ editor }: { editor: any }) {
   const [scanning, setScanning] = useState(false);
-  const [result, setResult] = useState({ score: 98.4, details: [] });
+  const [result, setResult] = useState<any>({ score: 98.4, details: [] });
   const [done, setDone] = useState(true);
 
   const runScan = async () => {
@@ -600,7 +601,7 @@ function IntegrityPanel({ paragraphs }) {
     setDone(false);
     setResult(null);
     try {
-      const docText = paragraphs.map(p => p.text).join('\n\n');
+      const docText = editor?.getText() || "";
       const resp = await fetch(ANTHROPIC_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -631,8 +632,8 @@ Check for: citation completeness, claim specificity, structural originality. No 
     setDone(true);
   };
 
-  const statusColor = (s) => s === 'pass' ? '#166534' : s === 'warning' ? '#92400e' : '#1e40af';
-  const statusBg = (s) => s === 'pass' ? '#f0fdf4' : s === 'warning' ? '#fffbeb' : '#eff6ff';
+  const statusColor = (s: string) => s === 'pass' ? '#166534' : s === 'warning' ? '#92400e' : '#1e40af';
+  const statusBg = (s: string) => s === 'pass' ? '#f0fdf4' : s === 'warning' ? '#fffbeb' : '#eff6ff';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 32, textAlign: 'center' }}>
@@ -648,7 +649,7 @@ Check for: citation completeness, claim specificity, structural originality. No 
             <div style={{ fontSize: 48, fontWeight: 700, fontFamily: "'Playfair Display', serif", color: s.green }}>{result.score}%</div>
             <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.2em', opacity: 0.5 }}>Originality Score</div>
           </div>
-          {result.details?.map((d, i) => (
+          {result.details?.map((d: any, i: number) => (
             <div key={i} style={{ padding: '10px 14px', background: statusBg(d.status), color: statusColor(d.status), borderRadius: 2, marginBottom: 8, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
               <CheckCircle2 size={14} style={{ flexShrink: 0, marginTop: 1 }} />
               <div>
@@ -675,7 +676,7 @@ Check for: citation completeness, claim specificity, structural originality. No 
 }
 
 // ── Tooltip wrapper ───────────────────────────────────────────────────────────
-function ToolbarBtn({ icon, label, onClick, highlight = false }) {
+function ToolbarBtn({ icon, label, onClick, highlight = false }: any) {
   const [hovered, setHovered] = useState(false);
   return (
     <div style={{ position: 'relative' }}>
@@ -712,15 +713,7 @@ function ToolbarBtn({ icon, label, onClick, highlight = false }) {
           padding: '4px 10px', borderRadius: 3, whiteSpace: 'nowrap',
           pointerEvents: 'none', zIndex: 100,
           boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
-        }}>
-          {label}
-          <div style={{
-            position: 'absolute', left: -5, top: '50%', transform: 'translateY(-50%)',
-            width: 0, height: 0,
-            borderTop: '5px solid transparent', borderBottom: '5px solid transparent',
-            borderRight: `5px solid ${s.green}`,
-          }} />
-        </div>
+        }}>{label}</div>
       )}
     </div>
   );
@@ -728,39 +721,98 @@ function ToolbarBtn({ icon, label, onClick, highlight = false }) {
 
 export default function ScriptoriumPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const projectId = searchParams.get('id');
+  
   const [activeSidebar, setActiveSidebar] = useState('citations');
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [format, setFormat] = useState('APA');
-  const [paragraphs, setParagraphs] = useState(INITIAL_PARAGRAPHS);
+  const [projectTitle, setProjectTitle] = useState("Loading Manuscript...");
   const [insertedCitations, setInsertedCitations] = useState([]);
-  const [editingPara, setEditingPara] = useState(null);
-  const [editText, setEditText] = useState('');
-  const [notification, setNotification] = useState(null);
+  const [notification, setNotification] = useState<any>(null);
   const [collaborators] = useState(COLLABORATORS);
-  const [freeText, setFreeText] = useState('');
+  const [editor, setEditor] = useState<any>(null);
 
-  const showNotif = (msg, type = 'success') => {
+  useEffect(() => {
+    if (projectId) {
+      fetchProject();
+    }
+  }, [projectId]);
+
+  const fetchProject = async () => {
+    try {
+      const res = await projectAPI.get(projectId!);
+      if (res.data) {
+        setProjectTitle(res.data.title);
+      }
+    } catch (err) {
+      console.error("Failed to fetch project:", err);
+    }
+  };
+
+  const showNotif = (msg: string, type = 'success') => {
     setNotification({ msg, type });
     setTimeout(() => setNotification(null), 3000);
   };
 
-  const handleInsertCitation = (cite) => {
-    if (!insertedCitations.find(c => c.id === cite.id)) {
-      setInsertedCitations(prev => [...prev, cite]);
+  const handleInsertCitation = async (cite: any) => {
+    if (!editor) return;
+    
+    try {
+      // Add citation to backend first to get formatted strings
+      const res = await projectAPI.addCitation(projectId!, cite, format);
+      const { inText, citationId } = res.data;
+
+      editor.commands.setCitation({
+        citationId,
+        inText,
+        paperId: cite.paperId,
+        title: cite.title
+      });
+
+      setInsertedCitations(res.data.bibliography);
+      showNotif(`Citation inserted: ${cite.title.slice(0, 20)}...`);
+    } catch (err) {
+      console.error("Failed to insert citation:", err);
+      showNotif("Failed to insert citation", "error");
     }
-    const fmt = FORMATS[format];
-    const citIdx = insertedCitations.findIndex(c => c.id === cite.id);
-    const idx = citIdx >= 0 ? citIdx + 1 : insertedCitations.length + 1;
-    const tag = fmt.inText(idx, cite);
-    setParagraphs(prev => prev.map((p, i) =>
-      i === prev.length - 1 || p.id === 'p2'
-        ? { ...p, text: p.text + ` ${tag}` }
-        : p
-    ));
-    showNotif(`Citation inserted: ${cite.author} (${cite.year})`);
   };
 
-  const fmt = FORMATS[format];
+  useEffect(() => {
+    if (editor && format && projectId) {
+      updateCitationStyles();
+    }
+  }, [format, editor, projectId]);
+
+  const updateCitationStyles = async () => {
+    try {
+      const res = await projectAPI.getBibliography(projectId!, format);
+      const { bibliography } = res.data;
+      setInsertedCitations(bibliography);
+
+      // Update TipTap nodes
+      editor.commands.command(({ tr, dispatch }: any) => {
+        let changed = false;
+        tr.doc.descendants((node: any, pos: number) => {
+          if (node.type.name === 'citation') {
+            const bibEntry = bibliography.find((b: any) => b.citationId === node.attrs.citationId);
+            if (bibEntry) {
+              const newInText = format === 'IEEE' ? `[${bibEntry.ieeeIndex}]` : node.attrs.inText;
+              if (newInText !== node.attrs.inText) {
+                tr.setNodeMarkup(pos, undefined, { ...node.attrs, inText: newInText });
+                changed = true;
+              }
+            }
+          }
+        });
+        return changed;
+      });
+    } catch (err) {
+      console.error("Failed to update citation styles:", err);
+    }
+  };
+
+  const fmt = (FORMATS as any)[format];
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', fontFamily: 'Inter, sans-serif', background: s.bg, color: s.text }}>
@@ -773,9 +825,8 @@ export default function ScriptoriumPage() {
         @keyframes slideUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: rgba(26,47,35,0.15); border-radius: 2px; }
-        textarea:focus, input:focus { outline: none; }
-        .collab-cursor { display: inline-block; width: 2px; height: 1em; vertical-align: text-bottom; margin: 0 1px; border-radius: 1px; animation: pulse 1.4s ease-in-out infinite; }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+        .tiptap-container { flex: 1; overflow-y: auto; background: #fff; position: relative; }
+        .tiptap-editor { max-width: 800px; margin: 0 auto; padding: 64px 20px; min-height: 100%; }
       `}</style>
 
       {/* Notification */}
@@ -796,7 +847,6 @@ export default function ScriptoriumPage() {
         padding: '24px 0', borderRight: `1px solid ${s.border}`,
         background: s.bg, flexShrink: 0,
       }}>
-        {/* Logo */}
         <div style={{
           width: 40, height: 40, background: s.green, borderRadius: 4,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -804,172 +854,65 @@ export default function ScriptoriumPage() {
           fontSize: 20, fontWeight: 700, marginBottom: 32,
         }}>U</div>
 
-        {/* Standard nav icons */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center' }}>
           <ToolbarBtn icon={<Feather size={20} />} label="Editor" onClick={() => {}} />
           <ToolbarBtn icon={<Users size={20} />} label="Collaborators" onClick={() => {}} />
           <ToolbarBtn icon={<History size={20} />} label="History" onClick={() => {}} />
-
-          {/* Divider */}
           <div style={{ width: 28, height: 1, background: s.text, opacity: 0.12, margin: '4px 0' }} />
-
-          {/* ── PLAGIARISM CHECKER BUTTON ── */}
-          <ToolbarBtn
-            icon={<ScanSearch size={20} />}
-            label="Plagiarism Checker"
-            highlight
-            onClick={() => router.push('/scriptorium/plag')}
-          />
-
-          {/* Divider */}
+          <ToolbarBtn icon={<ScanSearch size={20} />} label="Veritas Scan" highlight onClick={() => router.push('/scriptorium/plag')} />
           <div style={{ width: 28, height: 1, background: s.text, opacity: 0.12, margin: '4px 0' }} />
-
           <ToolbarBtn icon={<Settings size={20} />} label="Settings" onClick={() => {}} />
         </div>
       </aside>
 
       {/* MAIN WRITING AREA */}
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto', background: '#fff' }}>
-        <header style={{ height: 56, borderBottom: `1px solid ${s.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px', flexShrink: 0 }}>
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <header style={{ height: 56, background: '#fff', borderBottom: `1px solid ${s.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.2em', opacity: 0.4 }}>Draft</span>
-            <h1 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 14 }}>Quantifying Neural Plasticity in Virtual Frameworks</h1>
+            <h1 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 14 }}>{projectTitle}</h1>
             <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 8px', background: 'rgba(180,142,77,0.12)', color: s.accent, borderRadius: 2, letterSpacing: '0.1em', textTransform: 'uppercase' }}>{format}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ display: 'flex' }}>
-              {collaborators.map((col, i) => (
+              {collaborators.map((col: any, i: number) => (
                 <div key={i} title={col.name} style={{ width: 28, height: 28, borderRadius: '50%', border: '2px solid #fff', background: col.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: '#fff', fontWeight: 700, marginLeft: i > 0 ? -8 : 0, zIndex: collaborators.length - i }}>
                   {col.initials}
                 </div>
               ))}
             </div>
-            <button onClick={() => showNotif('Share link copied!')} style={{ padding: '6px 14px', borderRadius: 4, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', border: `1px solid ${s.green}`, background: 'transparent', color: s.text, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button onClick={() => showNotif('Link copied!')} style={{ padding: '6px 14px', borderRadius: 4, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', border: `1px solid ${s.green}`, background: 'transparent', color: s.text, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
               <Share2 size={11} /> Share
             </button>
-            <button onClick={() => showNotif('Document exported!')} style={{ padding: '6px 14px', borderRadius: 4, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', border: 'none', background: s.green, color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button onClick={() => showNotif('Exporting PDF...')} style={{ padding: '6px 14px', borderRadius: 4, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', border: 'none', background: s.green, color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
               <Download size={11} /> Export
             </button>
           </div>
         </header>
 
-        {/* Format indicator bar */}
-        <div style={{ height: 28, background: s.sidebarBg, borderBottom: `1px solid ${s.border}`, display: 'flex', alignItems: 'center', padding: '0 32px', gap: 16, flexShrink: 0 }}>
-          <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', opacity: 0.4 }}>Style:</span>
-          {Object.keys(FORMATS).map(f => (
-            <button key={f} onClick={() => setFormat(f)} style={{ padding: '2px 10px', fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', cursor: 'pointer', border: `1px solid ${format === f ? s.green : 'transparent'}`, borderRadius: 2, background: format === f ? s.green : 'transparent', color: format === f ? '#fff' : s.text, opacity: format === f ? 1 : 0.4, transition: 'all 0.15s', textTransform: 'uppercase' }}>
-              {f}
-            </button>
-          ))}
-          <span style={{ marginLeft: 'auto', fontSize: 9, opacity: 0.4, fontStyle: 'italic' }}>{fmt.bodyFont.split(',')[0].replace(/'/g, '')} · {fmt.fontSize}</span>
-        </div>
-
-        {/* Paper Content */}
-        <div style={{ flex: 1, padding: '64px 16px', maxWidth: 768, margin: '0 auto', width: '100%' }}>
-          <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 30, fontWeight: 700, textAlign: 'center', marginBottom: 48 }}>Abstract</h2>
-
-          {paragraphs.map((para, idx) => (
-            <div key={para.id} style={{ position: 'relative', marginBottom: 24 }}>
-              {collaborators.filter(c => c.cursor?.para === para.id).map((col, ci) => (
-                <div key={ci} style={{ position: 'absolute', top: -20, left: 8 + ci * 60, display: 'flex', alignItems: 'center', gap: 4, background: col.color, padding: '2px 6px', borderRadius: 2, zIndex: 10 }}>
-                  <span style={{ fontSize: 9, color: '#fff', fontWeight: 700 }}>{col.name.split(' ')[0]}</span>
-                </div>
-              ))}
-              {editingPara === para.id ? (
-                <div>
-                  <textarea
-                    autoFocus
-                    value={editText}
-                    onChange={e => setEditText(e.target.value)}
-                    style={{
-                      width: '100%', minHeight: 120, fontFamily: fmt.bodyFont,
-                      fontSize: fmt.fontSize, lineHeight: fmt.lineHeight,
-                      textAlign: fmt.align, color: fmt.color,
-                      border: `1px solid ${s.accent}`, borderRadius: 2, padding: '12px',
-                      resize: 'vertical', background: 'rgba(180,142,77,0.03)',
-                      caretColor: '#B48E4D', cursor: 'text', outline: 'none',
-                    }}
-                  />
-                  <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
-                    <button onClick={() => { setParagraphs(prev => prev.map(p => p.id === para.id ? { ...p, text: editText } : p)); setEditingPara(null); showNotif('Changes saved'); }} style={{ padding: '5px 12px', background: s.green, color: '#fff', border: 'none', borderRadius: 2, fontSize: 9, fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Save</button>
-                    <button onClick={() => setEditingPara(null)} style={{ padding: '5px 12px', background: 'transparent', color: s.text, border: `1px solid ${s.border}`, borderRadius: 2, fontSize: 9, fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Cancel</button>
-                  </div>
-                </div>
-              ) : (
-                <p
-                  onClick={() => { setEditingPara(para.id); setEditText(para.text); }}
-                  style={{
-                    fontFamily: fmt.bodyFont, fontSize: fmt.fontSize,
-                    lineHeight: fmt.lineHeight, textAlign: fmt.align,
-                    color: fmt.color, cursor: 'text', transition: 'all 0.2s',
-                    padding: '4px 8px', borderRadius: 2,
-                    border: '1px solid transparent',
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(180,142,77,0.3)'}
-                  onMouseLeave={e => e.currentTarget.style.borderColor = 'transparent'}
-                >
-                  {para.highlight
-                    ? <>
-                        {para.text.split(para.highlight)[0]}
-                        <span style={{ background: 'rgba(180,142,77,0.1)', borderBottom: '1px solid #B48E4D' }}>{para.highlight}</span>
-                        {para.text.split(para.highlight)[1]}
-                      </>
-                    : para.text}
-                </p>
-              )}
-            </div>
-          ))}
-
-          {insertedCitations.length > 0 && (
-            <div style={{ marginTop: 48, paddingTop: 32, borderTop: `1px solid ${s.border}` }}>
-              <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, fontWeight: 700, marginBottom: 16 }}>References</h3>
-              {insertedCitations.map((c, i) => (
-                <p key={c.id} style={{ fontFamily: fmt.bodyFont, fontSize: 14, lineHeight: 1.6, marginBottom: 10, color: fmt.color }}>
-                  {FORMATS[format].bibliography(c, i + 1)}
-                </p>
-              ))}
-            </div>
-          )}
-
-          <div style={{ padding: '48px 0', display: 'flex', justifyContent: 'center' }}>
-            <div style={{ width: 96, height: 1, background: 'rgba(26,47,35,0.15)' }} />
-          </div>
-          <div style={{ position: 'relative', minHeight: 120 }}>
-            <textarea
-              value={freeText}
-              onChange={e => {
-                setFreeText(e.target.value);
-                e.target.style.height = 'auto';
-                e.target.style.height = e.target.scrollHeight + 'px';
-              }}
-              onFocus={e => { e.target.style.borderColor = 'rgba(180,142,77,0.4)'; }}
-              onBlur={e => { e.target.style.borderColor = 'transparent'; }}
-              rows={4}
-              style={{
-                width: '100%', minHeight: 120, resize: 'none', overflow: 'hidden',
-                fontFamily: fmt.bodyFont, fontSize: fmt.fontSize,
-                lineHeight: fmt.lineHeight, textAlign: fmt.align, color: fmt.color,
-                background: 'transparent', border: '1px solid transparent',
-                borderRadius: 2, padding: '4px 8px', outline: 'none',
-                caretColor: '#B48E4D', cursor: 'text', display: 'block',
-                transition: 'border-color 0.2s',
-              }}
+        <div className="tiptap-container">
+          <div className="tiptap-editor" style={{
+            fontFamily: fmt.bodyFont,
+            fontSize: fmt.fontSize,
+            lineHeight: fmt.lineHeight,
+            textAlign: fmt.align as any,
+            color: fmt.color
+          }}>
+            <TipTap 
+              projectId={projectId || 'demo'} 
+              userId="user-1" 
+              userName="Julian Thorne" 
+              userColor="#B48E4D" 
+              onReady={setEditor}
             />
-            {!freeText && (
-              <span style={{
-                position: 'absolute', top: '4px', left: '8px', pointerEvents: 'none',
-                fontFamily: "'Playfair Display', serif", fontSize: fmt.fontSize,
-                fontStyle: 'italic', color: fmt.color, opacity: 0.25,
-              }}>Continue writing your thesis here…</span>
-            )}
           </div>
         </div>
       </main>
 
       {/* RIGHT SIDEBAR */}
-      <aside style={{ width: isSidebarOpen ? 320 : 0, borderLeft: `1px solid ${s.border}`, display: 'flex', flexDirection: 'column', background: s.sidebarBg, transition: 'width 0.3s ease', overflow: 'hidden', flexShrink: 0 }}>
+      <aside style={{ width: isSidebarOpen ? 320 : 0, borderLeft: `1px solid ${s.border}`, display: 'flex', flexDirection: 'column', background: s.sidebarBg, transition: 'all 0.3s ease', overflow: 'hidden', flexShrink: 0 }}>
         {isSidebarOpen && (
-          <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', animation: 'fadeIn 0.3s ease', minWidth: 320 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minWidth: 320 }}>
             <div style={{ display: 'flex', borderBottom: `1px solid ${s.border}` }}>
               {[
                 { key: 'citations', icon: <Binary size={20} />, label: 'Citations' },
@@ -986,29 +929,27 @@ export default function ScriptoriumPage() {
 
             <div style={{ flex: 1, overflowY: 'auto', padding: 20 }}>
               {activeSidebar === 'citations' && (
-                <AICitationPanel
-                  paragraphs={paragraphs}
-                  insertedCitations={insertedCitations}
-                  format={format}
-                  onInsert={handleInsertCitation}
+                <AICitationPanel 
+                  editor={editor} 
+                  insertedCitations={insertedCitations} 
+                  format={format} 
+                  onInsert={handleInsertCitation} 
                 />
               )}
               {activeSidebar === 'format' && (
-                <FormattingPanel
-                  format={format}
-                  setFormat={setFormat}
-                  paragraphs={paragraphs}
-                  setParagraphs={setParagraphs}
+                <FormattingPanel 
+                  format={format} 
+                  setFormat={setFormat} 
+                  editor={editor}
                 />
               )}
               {activeSidebar === 'integrity' && (
-                <IntegrityPanel paragraphs={paragraphs} />
+                <IntegrityPanel editor={editor} />
               )}
               {activeSidebar === 'comments' && (
-                <CollaborationPanel
-                  collaborators={collaborators}
-                  paragraphs={paragraphs}
-                  setParagraphs={setParagraphs}
+                <CollaborationPanel 
+                  collaborators={collaborators} 
+                  editor={editor}
                 />
               )}
             </div>

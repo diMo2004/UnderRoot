@@ -43,6 +43,10 @@ export const projectAPI = {
   delete: (id: string) => api.delete(`/api/projects/${id}`),
   addCollaborator: (id: string, email: string, role: string) =>
     api.post(`/api/projects/${id}/collaborators`, { email, role }),
+  addCitation: (id: string, citation: any, format: string) =>
+    api.post(`/api/citations/add`, { projectId: id, source: citation, template: format }),
+  getBibliography: (id: string, format: string) =>
+    api.get(`/api/citations/project/${id}?template=${format}`),
 };
 
 export const citationAPI = {

@@ -1,12 +1,13 @@
+import asyncio
 import re
 from datetime import datetime, timezone
 from hashlib import sha256
 from typing import List, Dict, Any
 from fastapi import APIRouter
 from models.schemas import PlagiarismRequest, PlagiarismResponse
-from services.plagiarism_lexical import check_lexical
+from services.plagiarism_lexical import build_lexical_runtime, check_lexical_with_runtime
 from services.plagiarism_semantic import build_semantic_runtime, check_semantic_with_runtime
-from services.plagiarism_structural import check_structural
+from services.plagiarism_structural import build_structural_runtime, check_structural_with_runtime
 from services.plagiarism_aggregator import build_section_result
 from services.query_builder import build_query_from_text
 from services.domain_topics import build_domain_query, is_domain_relevant
@@ -105,17 +106,20 @@ def _attach_evidence(section_results, records, top_k: int = 3):
 
 @router.post("/check", response_model=PlagiarismResponse)
 async def check_plagiarism(request: PlagiarismRequest):
+    print(f"--- AI SERVICE: Received plagiarism check request. Text length: {len(request.text)} ---")
     sections = _split_sections(request.text)
     section_results = []
 
     corpus: List[str] = []
     records: List[Dict[str, Any]] = []
     semantic_runtime = None
+    lexical_runtime = None
+    structural_runtime = None
 
     if getattr(request, "use_scholarly_sources", True):
-        base_q = build_query_from_text(request.text, top_n=12)
+        base_q = build_query_from_text(request.text, top_n=15)
         domain_q = build_domain_query(base_q)
-        per_source_limit = getattr(request, "per_source_limit", 15)
+        per_source_limit = getattr(request, "per_source_limit", 20)
 
         cache_key = _cache_key_from_query(domain_q, per_source_limit)
         cached_bundle = get_cached(cache_key, ttl_seconds=CACHE_TTL_SECONDS)
@@ -124,46 +128,45 @@ async def check_plagiarism(request: PlagiarismRequest):
             records = cached_bundle.get("records", [])
             corpus = cached_bundle.get("corpus", [])
             semantic_runtime = cached_bundle.get("semantic_runtime", None)
+            lexical_runtime = cached_bundle.get("lexical_runtime", None)
+            structural_runtime = cached_bundle.get("structural_runtime", None)
         else:
             records = await build_multi_source_records_async(domain_q, per_source_limit=per_source_limit)
-
-            # domain filter (defense in depth)
-            records = [
-                r for r in records
-                if is_domain_relevant(f"{r.get('title','')}. {r.get('abstract','')}")
-            ]
 
             corpus = [_record_to_text(r) for r in records if len(_record_to_text(r)) > 40]
 
             if corpus:
                 semantic_runtime = build_semantic_runtime(corpus)
+                lexical_runtime = build_lexical_runtime(corpus)
+                structural_runtime = build_structural_runtime(corpus)
 
             set_cached(cache_key, {
                 "records": records,
                 "corpus": corpus,
                 "semantic_runtime": semantic_runtime,
+                "lexical_runtime": lexical_runtime,
+                "structural_runtime": structural_runtime,
             })
 
     if not corpus:
         corpus = _FALLBACK_CORPUS
         records = []
         semantic_runtime = build_semantic_runtime(corpus)
+        lexical_runtime = build_lexical_runtime(corpus)
+        structural_runtime = build_structural_runtime(corpus)
 
-    for title, sentences in sections:
-        if not sentences:
-            continue
+    async def process_section_internal(title, sentences, lex_rt, sem_rt, struct_rt):
+        if not sentences: return None
+        lex = (check_lexical_with_runtime(sentences, lex_rt) if lex_rt is not None 
+               else [{"score": 0.0, "source_index": -1, "source_text": ""} for _ in sentences])
+        sem = (check_semantic_with_runtime(sentences, sem_rt) if sem_rt is not None
+               else [{"score": 0.0, "source_index": -1, "source_text": ""} for _ in sentences])
+        struct = (check_structural_with_runtime(sentences, struct_rt) if struct_rt is not None
+                  else [{"score": 0.0, "source_index": -1, "source_text": ""} for _ in sentences])
+        return build_section_result(title, sentences, lex, sem, struct)
 
-        lex = check_lexical(sentences, corpus)
-
-        sem = (
-            check_semantic_with_runtime(sentences, semantic_runtime)
-            if semantic_runtime is not None
-            else [{"score": 0.0, "source_index": -1, "source_text": ""} for _ in sentences]
-        )
-
-        struct = check_structural(sentences, corpus)
-
-        section_results.append(build_section_result(title, sentences, lex, sem, struct))
+    section_results = await asyncio.gather(*(process_section_internal(t, s, lexical_runtime, semantic_runtime, structural_runtime) for t, s in sections))
+    section_results = [r for r in section_results if r is not None]
 
     section_results = _attach_evidence(section_results, records, top_k=3)
 

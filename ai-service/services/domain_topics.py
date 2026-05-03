@@ -13,15 +13,13 @@ NEGATIVE_HINTS = [
 
 def build_domain_query(base_query: str) -> str:
     base_query = (base_query or "").strip()
-    topic_boost = " OR ".join([
-        "cybersecurity", "machine learning", "deep learning", "robotics",
-        "internet of things", "cryptography", "blockchain", "embedded systems",
-        "computer vision", "diffusion models", "generative ai",
-        "cloud computing", "computer architecture", "operating systems"
-    ])
-    if base_query:
-        return f"({base_query}) AND ({topic_boost})"
-    return topic_boost
+    if not base_query:
+        return "OR ".join(DOMAIN_TOPICS)
+    
+    # Don't FORCE the domain, just return the base query. 
+    # The domain filtering can happen later if needed, but for plagiarism, 
+    # we want to find THE paper, regardless of domain.
+    return base_query
 
 def is_domain_relevant(text: str) -> bool:
     t = (text or "").lower()

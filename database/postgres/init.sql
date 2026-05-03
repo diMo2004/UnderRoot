@@ -37,8 +37,8 @@ CREATE INDEX IF NOT EXISTS idx_collaborators_user_id ON collaborators(user_id);
 
 CREATE TABLE IF NOT EXISTS citations (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    project_id      UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-    user_id         UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    project_id      VARCHAR(255) NOT NULL,
+    user_id         VARCHAR(255) NOT NULL,
     paper_id        VARCHAR(255) NOT NULL,
     title           TEXT NOT NULL,
     authors         TEXT[],
