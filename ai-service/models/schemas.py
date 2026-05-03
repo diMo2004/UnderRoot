@@ -88,3 +88,12 @@ class SummaryRequest(BaseModel):
 class SummaryResponse(BaseModel):
     sectionSummaries: List[SectionSummary]
     abstractDraft: str
+
+
+class RewriteRequest(BaseModel):
+    text: str
+    format: Optional[str] = None
+
+
+class RewriteResponse(BaseModel):
+    rewrittenText: str

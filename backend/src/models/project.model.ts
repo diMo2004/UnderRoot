@@ -5,6 +5,7 @@ export interface IProject extends Document {
   ownerId: string;
   collaborators: string[];
   content: string;
+  yjsState?: Buffer;
   lastModified: Date;
   metadata: {
     institution?: string;
@@ -18,6 +19,7 @@ const ProjectSchema: Schema = new Schema({
   ownerId: { type: String, required: true },
   collaborators: [{ type: String }],
   content: { type: String, default: "" },
+  yjsState: { type: Buffer },
   lastModified: { type: Date, default: Date.now },
   metadata: {
     institution: { type: String },

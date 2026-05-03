@@ -70,4 +70,30 @@ router.post("/summary/generate", async (req, res) => {
   }
 });
 
+// Proxy for rewrite (Reformat)
+router.post("/reformat/rewrite", async (req, res) => {
+  try {
+    const response = await axios.post(`${AI_SERVICE_URL}/api/summary/rewrite`, req.body, {
+      timeout: 60000 // 1 minute
+    });
+    res.json(response.data);
+  } catch (error: any) {
+    console.error("AI Service Error (Rewrite):", error.message);
+    res.status(error.response?.status || 500).json({ error: "AI service unavailable" });
+  }
+});
+
+// Proxy for proofread (Fix Copy-Paste)
+router.post("/reformat/proofread", async (req, res) => {
+  try {
+    const response = await axios.post(`${AI_SERVICE_URL}/api/summary/proofread`, req.body, {
+      timeout: 60000 // 1 minute
+    });
+    res.json(response.data);
+  } catch (error: any) {
+    console.error("AI Service Error (Proofread):", error.message);
+    res.status(error.status || 500).json({ error: "AI service unavailable" });
+  }
+});
+
 export default router;

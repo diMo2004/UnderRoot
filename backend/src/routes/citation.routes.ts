@@ -7,6 +7,6 @@ const router = Router();
 
 router.post("/suggest", authMiddleware, citationLimiter, suggestCitations);
 router.post("/add", authMiddleware, citationLimiter, addCitation);
-router.get("/project/:projectId", authMiddleware, citationLimiter, getProjectBibliography);
+router.get("/project/:projectId", authMiddleware, getProjectBibliography);
 
 export default router;

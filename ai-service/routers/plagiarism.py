@@ -160,7 +160,7 @@ async def check_plagiarism(request: PlagiarismRequest):
         if not sentences: return None
         
         # Local KB check (Full text matches)
-        local_matches = kb.search(sentences)
+        local_matches = kb.search_sentences(sentences)
         
         lex = (check_lexical_with_runtime(sentences, lex_rt) if lex_rt is not None 
                else [{"score": 0.0, "source_index": -1, "source_text": ""} for _ in sentences])

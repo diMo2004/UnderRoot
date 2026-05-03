@@ -15,6 +15,14 @@ allowed_origins = [
     if origin.strip()
 ]
 
+@app.on_event("startup")
+async def startup_event():
+    import asyncio
+    from services.knowledge_base import kb
+    print("AI Service: Starting auto-ingestion of knowledge base in background...")
+    # Run heavy ingestion in a separate thread to avoid blocking the event loop
+    asyncio.create_task(asyncio.to_thread(kb.auto_ingest_from_dir))
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins if allowed_origins else ["*"],

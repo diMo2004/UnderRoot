@@ -25,7 +25,7 @@ async def suggest_citations(request: CitationRequest):
         if raw_papers:
             print("DEBUG raw_papers[0] keys:", list(raw_papers[0].keys()))
 
-        ranked = await rank_papers(claim, raw_papers)
+        ranked = rank_papers(claim, raw_papers)
         print("DEBUG ranked:", len(ranked))
 
         candidates = ranked if ranked else raw_papers

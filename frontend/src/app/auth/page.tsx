@@ -119,18 +119,37 @@ export default function SignInPage() {
     }
   }, [googleLoaded]);
 
-  const handleGoogleCredential = (response: { credential: string }) => {
-    const base64Url = response.credential.split('.')[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const payload = JSON.parse(window.atob(base64));
-    setCredentials(prev => ({
-      ...prev,
-      fullName: payload.name ?? '',
-      email: payload.email ?? '',
-    }));
-    // Send token to your backend here:
-    // await fetch('/api/auth/google', { method: 'POST', body: JSON.stringify({ token: response.credential }) })
-    window.location.href = '/dashboard';
+  const handleGoogleCredential = async (response: { credential: string }) => {
+    try {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
+      const res = await fetch(`${backendUrl}/api/auth/google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential: response.credential }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        console.error('Auth failed:', errData);
+        alert('Authentication failed. Please try again.');
+        return;
+      }
+
+      const data = await res.json();
+      
+      // Store the JWT token — this is used by all API calls and the collaboration server
+      localStorage.setItem('underroot_token', data.token);
+      
+      // Store user info for display
+      if (data.user) {
+        localStorage.setItem('underroot_user', JSON.stringify(data.user));
+      }
+
+      window.location.href = '/dashboard';
+    } catch (err) {
+      console.error('Google auth error:', err);
+      alert('Failed to connect to server. Please try again.');
+    }
   };
 
   const handleSignIn = (e: React.FormEvent) => {

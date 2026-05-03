@@ -1,6 +1,6 @@
 from fastapi import APIRouter
-from models.schemas import SummaryRequest, SummaryResponse, SectionSummary
-from services.summarizer import _split_sections, summarize_section, draft_abstract
+from models.schemas import SummaryRequest, SummaryResponse, SectionSummary, RewriteRequest, RewriteResponse
+from services.summarizer import _split_sections, summarize_section, draft_abstract, rewrite_text, proofread_text
 
 router = APIRouter()
 
@@ -17,6 +17,18 @@ async def generate_summary(request: SummaryRequest):
     abstract = draft_abstract(request.text)
 
     return SummaryResponse(
-        section_summaries=section_summaries,
-        abstract_draft=abstract,
+        sectionSummaries=section_summaries,
+        abstractDraft=abstract,
     )
+
+
+@router.post("/rewrite", response_model=RewriteResponse)
+async def rewrite(request: RewriteRequest):
+    rewritten = rewrite_text(request.text, request.format)
+    return RewriteResponse(rewrittenText=rewritten)
+
+
+@router.post("/proofread", response_model=RewriteResponse)
+async def proofread(request: RewriteRequest):
+    rewritten = proofread_text(request.text)
+    return RewriteResponse(rewrittenText=rewritten)

@@ -88,12 +88,19 @@ async def search_papers_fallback_async(query: str, limit: int = 10) -> List[Dict
     return _records_to_papers(records)[:limit]
 
 async def search_for_claim_async(claim: str, limit: int = 10) -> List[Dict[str, Any]]:
+    from services.knowledge_base import kb
     keywords = extract_keywords(claim)
 
-    # Try S2 first (sync) — this is OK
+    # 1) Try Local KB first
+    local_papers = kb.search([claim], top_k=5)
+    if local_papers:
+        external_papers = search_papers(keywords, limit=limit // 2)
+        return (local_papers + external_papers)[:limit]
+
+    # 2) Fallback to S2
     papers = search_papers(keywords, limit=limit)
     if papers:
         return papers
 
-    # Fallback using the raw claim (better query)
-    return await search_papers_fallback_async(claim, limit=limit)
+    # 3) Fallback using the raw claim
+    return await search_papers_fallback_async(claim, limit=limit)

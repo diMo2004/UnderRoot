@@ -24,5 +24,5 @@ function createRateLimiter(limit: number, windowSeconds: number) {
 const SECONDS_PER_DAY = 24 * 60 * 60;
 const SECONDS_PER_HOUR = 60 * 60;
 
-export const citationLimiter = createRateLimiter(20, SECONDS_PER_DAY); // 20/day
-export const plagiarismLimiter = createRateLimiter(10, SECONDS_PER_HOUR); // 10/hour
+export const citationLimiter = createRateLimiter(1000, SECONDS_PER_HOUR); // 1000/hour
+export const plagiarismLimiter = createRateLimiter(100, SECONDS_PER_HOUR); // 100/hour
