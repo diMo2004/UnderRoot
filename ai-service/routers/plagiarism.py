@@ -13,6 +13,7 @@ from services.query_builder import build_query_from_text
 from services.domain_topics import build_domain_query, is_domain_relevant
 from services.scholarly_sources import build_multi_source_records_async
 from services.runtime_cache import get_cached, set_cached
+from services.knowledge_base import kb
 
 router = APIRouter()
 
@@ -157,12 +158,31 @@ async def check_plagiarism(request: PlagiarismRequest):
 
     async def process_section_internal(title, sentences, lex_rt, sem_rt, struct_rt):
         if not sentences: return None
+        
+        # Local KB check (Full text matches)
+        local_matches = kb.search(sentences)
+        
         lex = (check_lexical_with_runtime(sentences, lex_rt) if lex_rt is not None 
                else [{"score": 0.0, "source_index": -1, "source_text": ""} for _ in sentences])
         sem = (check_semantic_with_runtime(sentences, sem_rt) if sem_rt is not None
                else [{"score": 0.0, "source_index": -1, "source_text": ""} for _ in sentences])
         struct = (check_structural_with_runtime(sentences, struct_rt) if struct_rt is not None
                   else [{"score": 0.0, "source_index": -1, "source_text": ""} for _ in sentences])
+        
+        # Merge local matches into results
+        for i in range(len(sentences)):
+            l_match = local_matches[i]
+            # If local match is very strong, overwrite semantic/lexical metadata
+            if l_match["score"] > 0.85:
+                # We prioritize local metadata if it's a near-exact match
+                sem[i]["score"] = max(sem[i]["score"], l_match["score"])
+                sem[i]["source_text"] = l_match["text"]
+                sem[i]["source_metadata"] = {
+                    "title": l_match["title"],
+                    "url": l_match["url"],
+                    "source": "Private Library"
+                }
+
         return build_section_result(title, sentences, lex, sem, struct)
 
     section_results = await asyncio.gather(*(process_section_internal(t, s, lexical_runtime, semantic_runtime, structural_runtime) for t, s in sections))

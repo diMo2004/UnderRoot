@@ -1,7 +1,7 @@
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import citation, plagiarism, summary, mindmap
+from routers import citation, plagiarism, summary, mindmap, ingestion
 
 app = FastAPI(
     title="UnderRoot AI Service",
@@ -27,6 +27,7 @@ app.include_router(citation.router, prefix="/api/citations", tags=["citations"])
 app.include_router(plagiarism.router, prefix="/api/plagiarism", tags=["plagiarism"])
 app.include_router(summary.router, prefix="/api/summary", tags=["summary"])
 app.include_router(mindmap.router, prefix="/api/mindmap", tags=["mindmap"])
+app.include_router(ingestion.router, prefix="/api/ingest", tags=["ingest"])
 
 
 @app.get("/health")
