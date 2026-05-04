@@ -37,8 +37,8 @@ export const Citation = Node.create({
       'span',
       mergeAttributes(HTMLAttributes, {
         'data-type': 'citation',
-        class: 'citation-node inline-block bg-gold-100 text-gold-900 px-1 rounded cursor-pointer hover:bg-gold-200 transition-colors',
-        style: 'background-color: rgba(184, 150, 46, 0.1); color: #B8962E; padding: 0 4px; border-radius: 3px; font-weight: 600;',
+        class: 'citation-node',
+        style: 'color: inherit; font-weight: 600;',
       }),
       HTMLAttributes.inText,
     ];

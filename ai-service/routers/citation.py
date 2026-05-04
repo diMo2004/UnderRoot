@@ -43,10 +43,6 @@ async def suggest_citations(request: CitationRequest):
 
     return CitationResponse(citations=normalized, claims_detected=claims)
 
-    normalized = [normalize_paper(p) for p in list(all_papers.values())[:10]]
-    normalized.sort(key=lambda x: x.get("relevance_score", 0.0), reverse=True)
-
-    return CitationResponse(citations=normalized, claims_detected=claims)
 
 
 @router.post("/format", response_model=CitationFormatResponse)

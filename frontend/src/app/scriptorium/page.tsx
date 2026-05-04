@@ -28,7 +28,11 @@ const FORMATS = {
     label: "IEEE",
     description: "Numbered references, technical journals",
     inText: (id: any) => `[${id}]`,
-    bibliography: (c: any, id: any) => `[${id}] ${c.author}, "${c.title}," ${c.source}, ${c.year}.`,
+    bibliography: (c: any, id: any) => {
+      const authors = c.authors || (c.author ? [c.author] : []);
+      const authorStr = authors.length ? authors.join(', ') : 'Anonymous';
+      return `[${id}] ${authorStr}, "${c.title}," ${c.source}, ${c.year}.`;
+    },
     bodyFont: "'Times New Roman', serif",
     fontSize: "12px",
     lineHeight: "1.3",
@@ -40,8 +44,20 @@ const FORMATS = {
   APA: {
     label: "APA",
     description: "Author-date style, social sciences",
-    inText: (_: any, c: any) => `(${c.author.split(",")[0]}, ${c.year})`,
-    bibliography: (c: any) => `${c.author} (${c.year}). ${c.title}. ${c.source}.`,
+    inText: (_: any, c: any) => {
+      const authors = c.authors || (c.author ? [c.author] : []);
+      if (!authors.length) return `(${c.title.slice(0, 20)}..., ${c.year})`;
+      const surname = (n: string) => n.trim().split(/[,\s]+/).pop() || n;
+      if (authors.length === 1) return `(${surname(authors[0])}, ${c.year})`;
+      if (authors.length === 2) return `(${surname(authors[0])} & ${surname(authors[1])}, ${c.year})`;
+      return `(${surname(authors[0])} et al., ${c.year})`;
+    },
+
+    bibliography: (c: any) => {
+      const authors = c.authors || (c.author ? [c.author] : []);
+      const authorStr = authors.length ? authors.join(', ') : 'Anonymous';
+      return `${authorStr} (${c.year}). ${c.title}. ${c.source}.`;
+    },
     bodyFont: "'Georgia', serif",
     fontSize: "18px",
     lineHeight: "2",
@@ -52,7 +68,11 @@ const FORMATS = {
     label: "ACM",
     description: "Superscript refs, computing",
     inText: (id: any) => `[${id}]`,
-    bibliography: (c: any, id: any) => `${id}. ${c.author} ${c.year}. ${c.title}. ${c.source}.`,
+    bibliography: (c: any, id: any) => {
+      const authors = c.authors || (c.author ? [c.author] : []);
+      const authorStr = authors.length ? authors.join(', ') : 'Anonymous';
+      return `${id}. ${authorStr}. ${c.year}. ${c.title}. In ${c.source}.`;
+    },
     bodyFont: "'Palatino Linotype', serif",
     fontSize: "17px",
     lineHeight: "1.75",
@@ -206,7 +226,7 @@ function CitationCard({ cite, format, onInsert, hovered, onHover }: any) {
   );
 }
 
-function AICitationPanel({ editor, insertedCitations, format, onInsert, projectId }: any) {
+function AICitationPanel({ editor, insertedCitations, format, onInsert, projectId }: { editor: any, insertedCitations: any[], format: string, onInsert: (cite: any) => void, projectId: string }) {
   const [query, setQuery] = useState('');
   const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
   const [docSuggestions, setDocSuggestions] = useState<any[]>([]);
@@ -215,7 +235,7 @@ function AICitationPanel({ editor, insertedCitations, format, onInsert, projectI
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('suggested');
 
-  const searchCitations = useCallback(async (isDocSearch = false) => {
+  const searchCitations = useCallback(async (isDocSearch: boolean = false) => {
     const textToSearch = isDocSearch ? editor?.getText() : query;
     if (!textToSearch?.trim()) return;
     setLoading(true);
@@ -234,7 +254,8 @@ function AICitationPanel({ editor, insertedCitations, format, onInsert, projectI
       const citations = data?.citations || [];
       const mapped = citations.map((c: any, i: number) => ({
         id: (isDocSearch ? 200 : 100) + i,
-        author: (c.authors || []).join(', ') || 'Unknown',
+        authors: c.authors || [],
+        author: (c.authors || []).join(', ') || 'Anonymous',
         year: c.year || 2024,
         title: c.title || 'Untitled',
         source: c.venue || c.provider || 'Academic Source',
@@ -242,6 +263,7 @@ function AICitationPanel({ editor, insertedCitations, format, onInsert, projectI
         paper_id: c.paper_id || c.paperId || `ai-${i}`,
         verified: !!c.doi,
       }));
+
       if (isDocSearch) setDocSuggestions(mapped);
       else setAiSuggestions(mapped);
     } catch (e) {
@@ -258,7 +280,7 @@ function AICitationPanel({ editor, insertedCitations, format, onInsert, projectI
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
       <div style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', gap: 0, marginBottom: 16, borderBottom: `1px solid ${s.border}` }}>
-          {['suggested', 'ai-search'].map(tab => (
+          {['suggested', 'ai-search'].map((tab: string) => (
             <button key={tab} onClick={() => setActiveTab(tab)} style={{
               flex: 1, padding: '10px 4px', fontSize: 9, fontWeight: 700,
               textTransform: 'uppercase', letterSpacing: '0.12em',
@@ -277,8 +299,8 @@ function AICitationPanel({ editor, insertedCitations, format, onInsert, projectI
             <div style={{ display: 'flex', gap: 8 }}>
               <input
                 value={query}
-                onChange={e => setQuery(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && searchCitations(false)}
+                onChange={(e: any) => setQuery(e.target.value)}
+                onKeyDown={(e: any) => e.key === 'Enter' && searchCitations(false)}
                 placeholder="e.g. machine learning in neuroscience"
                 style={{
                   flex: 1, padding: '8px 12px', fontSize: 11,
@@ -338,7 +360,7 @@ function AICitationPanel({ editor, insertedCitations, format, onInsert, projectI
         </div>
       )}
 
-      {allCites.map(cite => (
+      {allCites.map((cite: any) => (
         <CitationCard
           key={cite.id}
           cite={cite}
@@ -1101,29 +1123,85 @@ export default function ScriptoriumPage() {
     }
   };
 
-  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !editor) return;
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const content = event.target?.result as string;
-        if (file.name.endsWith('.json')) {
-          editor.commands.setContent(JSON.parse(content));
-        } else {
-          // TipTap handles plain text/markdown string decently via setContent
-          editor.commands.setContent(content);
+    const ext = file.name.split('.').pop()?.toLowerCase();
+
+    try {
+      if (ext === 'pdf') {
+        // PDF import via pdfjs-dist
+        const pdfjsLib = await import('pdfjs-dist');
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.mjs`;
+        const { convertLinesToContent } = await import('@/lib/mathParser');
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        const lines: string[] = [];
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          let pageText = '';
+          let lastY: number | null = null;
+          for (const item of textContent.items as any[]) {
+            if (lastY !== null && Math.abs(item.transform[5] - lastY) > 5) {
+              if (pageText.trim()) lines.push(pageText.trim());
+              pageText = '';
+            }
+            pageText += item.str + ' ';
+            lastY = item.transform[5];
+          }
+          if (pageText.trim()) lines.push(pageText.trim());
         }
-        showNotif(`Successfully imported ${file.name}`);
-        // Refresh pagination after import
-        setTimeout(() => (editor as any)?.__triggerPagination?.('load'), 500);
-      } catch (err) {
-        console.error("Import failed:", err);
-        showNotif("Failed to parse file. Ensure it's a valid text or JSON file.", "error");
+        
+        // Auto-detect format
+        const { detectPaperFormat } = await import('@/lib/formatDetector');
+        const detected = detectPaperFormat(lines.join('\n'));
+        setFormat(detected.format);
+
+        // Convert to structured content with math nodes
+        const content = convertLinesToContent(lines);
+        editor.commands.setContent({ type: 'doc', content });
+        showNotif(`Imported PDF (${detected.format} detected): ${file.name}`);
+      } else if (ext === 'docx') {
+        // DOCX import via mammoth
+        const mammoth = await import('mammoth');
+        const arrayBuffer = await file.arrayBuffer();
+        const result = await mammoth.convertToHtml({ arrayBuffer });
+        
+        // Extract raw text for format detection
+        const rawText = result.value.replace(/<[^>]*>?/gm, '');
+        const { detectPaperFormat } = await import('@/lib/formatDetector');
+        const detected = detectPaperFormat(rawText);
+        setFormat(detected.format);
+
+        editor.commands.setContent(result.value);
+        showNotif(`Imported DOCX (${detected.format} detected): ${file.name}`);
+      } else if (ext === 'json') {
+        const content = await file.text();
+        editor.commands.setContent(JSON.parse(content));
+        showNotif(`Imported JSON: ${file.name}`);
+      } else {
+        // Plain text / markdown — parse with math support
+        const { convertLinesToContent } = await import('@/lib/mathParser');
+        const content = await file.text();
+        const lines = content.split(/\n/).filter((p: string) => p.trim());
+        
+        // Auto-detect format
+        const { detectPaperFormat } = await import('@/lib/formatDetector');
+        const detected = detectPaperFormat(content);
+        setFormat(detected.format);
+
+        const nodes = convertLinesToContent(lines);
+        editor.commands.setContent({ type: 'doc', content: nodes });
+        showNotif(`Imported (${detected.format} detected): ${file.name}`);
       }
-    };
-    reader.readAsText(file);
+      // Refresh pagination after import
+      setTimeout(() => (editor as any)?.__triggerPagination?.('load'), 500);
+    } catch (err) {
+      console.error('Import failed:', err);
+      showNotif('Failed to import file. Check format and try again.', 'error');
+    }
     // Reset input for same-file re-imports
     e.target.value = '';
   };
@@ -1332,7 +1410,7 @@ export default function ScriptoriumPage() {
             <input 
               id="import-input"
               type="file" 
-              accept=".txt,.md,.json"
+              accept=".txt,.md,.json,.pdf,.docx"
               style={{ display: 'none' }}
               onChange={handleImport}
             />
@@ -1611,7 +1689,7 @@ export default function ScriptoriumPage() {
                   insertedCitations={insertedCitations} 
                   format={format} 
                   onInsert={handleInsertCitation} 
-                  projectId={projectId}
+                  projectId={projectId || ''}
                 />
               )}
               {activeSidebar === 'format' && (

@@ -91,8 +91,8 @@ export async function addCitation(req: Request, res: Response): Promise<void> {
         source.title,
         source.authors ?? null,
         source.year ?? null,
-        source.venue ?? null,
-        source.doi ?? null,
+        source.venue?.slice(0, 2000) ?? null,
+        source.doi?.slice(0, 1000) ?? null,
       ]
     );
 

@@ -64,29 +64,55 @@ export function formatBibliography(style: CitationStyle, source: CitationSource,
     return `${a}"${title}." ${v}${y}${l}`.trim().replace(/\s+,/g, ",");
   }
 
+  if (style === "acm") {
+    const a = authors.length ? `${authors.join(", ")}.` : "";
+    const v = venue ? `In ${venue}.` : "";
+    const y = year ? ` ${year}.` : "";
+    const l = link ? ` ${link}` : "";
+    return `${a}${y} ${title}. ${v}${l}`.trim();
+  }
+
   // fallback
   return `${title}${link ? ` — ${link}` : ""}`.trim();
 }
 
 export function formatInText(style: CitationStyle, source: CitationSource, ieeeIndex?: number): string {
+  // Handle both plural and singular author fields for robustness
   const authors = (source.authors ?? []).filter(Boolean);
+  const fallbackAuthor = (source as any).author;
+  const finalAuthors = authors.length > 0 ? authors : (fallbackAuthor ? [fallbackAuthor] : []);
+  
   const year = source.year ?? undefined;
 
   if (style === "ieee") {
-    // IEEE is numeric
     if (typeof ieeeIndex !== "number") return "[?]";
     return `[${ieeeIndex}]`;
   }
 
   if (style === "apa") {
-    const a = authors.length ? lastName(authors[0]) : source.title;
+    let authorStr = "";
+    if (finalAuthors.length === 0) {
+      authorStr = source.title;
+    } else if (finalAuthors.length === 1) {
+      authorStr = lastName(finalAuthors[0]);
+    } else if (finalAuthors.length === 2) {
+      authorStr = `${lastName(finalAuthors[0])} & ${lastName(finalAuthors[1])}`;
+    } else {
+      authorStr = `${lastName(finalAuthors[0])} et al.`;
+    }
+    
     const y = year ? `${year}` : "n.d.";
-    return `(${a}, ${y})`;
+    return `(${authorStr}, ${y})`;
   }
 
   if (style === "mla") {
-    const a = authors.length ? lastName(authors[0]) : source.title;
+    const a = finalAuthors.length ? lastName(finalAuthors[0]) : source.title;
     return `(${a})`;
+  }
+
+  if (style === "acm") {
+    if (typeof ieeeIndex !== "number") return "[?]";
+    return `[${ieeeIndex}]`;
   }
 
   return `(${source.title})`;

@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import Document from '@tiptap/extension-document';
 import Collaboration from '@tiptap/extension-collaboration';
 import CollaborationCursor from '@tiptap/extension-collaboration-cursor';
 import Highlight from '@tiptap/extension-highlight';
@@ -20,14 +21,17 @@ import TextAlign from '@tiptap/extension-text-align';
 import { Citation } from './extensions/Citation';
 import { Chart } from './extensions/Chart';
 import { InlineMath, MathBlock } from './extensions/Math';
+import { Page } from './extensions/Page';
 import BubbleMenuExtension from '@tiptap/extension-bubble-menu';
 
 /* ─── A4 Page Constants (96 DPI) ─── */
 const PAGE_WIDTH = 816;
 const PAGE_HEIGHT = 1123;
 const PAGE_PADDING = 96;
-const PAGE_GAP = 40;
-const CONTENT_HEIGHT = PAGE_HEIGHT - (PAGE_PADDING * 2); // 931px
+
+const CustomDocument = Document.extend({
+  content: 'page+',
+});
 
 const ExtendedImage = Image.extend({
   addAttributes() {
@@ -39,7 +43,7 @@ const ExtendedImage = Image.extend({
   },
 });
 
-export type PaginationReason = 'format' | 'cleanup' | 'paste' | 'load';
+export type PaginationReason = 'format' | 'cleanup' | 'paste' | 'load' | 'update';
 
 interface TipTapProps {
   projectId: string;
@@ -55,7 +59,6 @@ export default function TipTap({ projectId, userId, userName, userColor, onReady
   const wrapperRef = useRef<HTMLDivElement>(null);
   const paginationLockRef = useRef(false);
   const debounceTimerRef = useRef<any>(null);
-  const [pageCount, setPageCount] = useState(1);
 
   const { ydoc, provider } = React.useMemo(() => {
     const ydoc = new Y.Doc();
@@ -69,65 +72,24 @@ export default function TipTap({ projectId, userId, userName, userColor, onReady
   }, [projectId]);
 
   /* ═══════════════════════════════════════════════════════════════
-     PAGINATION ENGINE
-     Uses CSS `margin-top` on blocks that cross page boundaries.
-     Runs ONLY on explicit triggers + debounced content settle.
+     TRUE PAGE OVERFLOW ENGINE
+     Moves nodes that overflow horizontally in the CSS columns
+     to the next physical page node.
      ═══════════════════════════════════════════════════════════════ */
   const runPagination = useCallback(() => {
-    const pm = wrapperRef.current?.querySelector('.ProseMirror') as HTMLElement | null;
+    if (!wrapperRef.current) return;
+    const pm = wrapperRef.current.querySelector('.ProseMirror') as HTMLElement | null;
     if (!pm) return;
-
-    // Get all block-level children (skip <style> tags)
-    const blocks = Array.from(pm.children).filter(
-      (el) => el instanceof HTMLElement && el.tagName !== 'STYLE'
-    ) as HTMLElement[];
-    if (blocks.length === 0) return;
-
-    // 1. CLEAR previous adjustments
-    for (const el of blocks) {
-      if (el.dataset.pageBreak) {
-        el.style.marginTop = '';
-        delete el.dataset.pageBreak;
-      }
-    }
-    // Force reflow for clean measurements
-    void pm.offsetHeight;
-
-    // Continuous Mode: We don't push text, we just estimate page count
-    let maxPage = 1;
-    const pmRect = pm.getBoundingClientRect();
-    const cycle = PAGE_HEIGHT + PAGE_GAP;
-
-    for (let i = 0; i < blocks.length; i++) {
-      const el = blocks[i];
-      const elRect = el.getBoundingClientRect();
-      const top = elRect.top - pmRect.top;
-      const pageIndex = Math.floor(top / cycle);
-      maxPage = Math.max(maxPage, pageIndex + 1);
-    }
-
-    setPageCount(maxPage);
+    
+    // Find the editor instance from window if possible, or we need to access it via state
+    // We bind it in `editor` state below
   }, []);
-
-  const triggerPagination = useCallback((reason: string) => {
-    if (paginationLockRef.current) return;
-    paginationLockRef.current = true;
-
-    // Run multiple passes to account for layout shifts and font loading
-    const passes = [0, 150, 500, 1500];
-    passes.forEach((delay, index) => {
-      setTimeout(() => {
-        runPagination();
-        if (index === passes.length - 1) {
-          paginationLockRef.current = false;
-        }
-      }, delay);
-    });
-  }, [runPagination]);
 
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({ history: false }),
+      CustomDocument,
+      Page,
+      StarterKit.configure({ document: false, history: false }),
       Highlight, Citation, Underline, TextStyle, Color,
       ExtendedImage.configure({
         inline: true, allowBase64: true,
@@ -151,40 +113,117 @@ export default function TipTap({ projectId, userId, userName, userColor, onReady
       InlineMath,
       MathBlock,
     ],
-    onUpdate: () => {
-      triggerPagination('update');
-    },
     editorProps: {
       attributes: {
         class: 'prose prose-lg max-w-none focus:outline-none',
         style: 'font-family: inherit; line-height: inherit; color: inherit; text-align: inherit;',
         spellcheck: 'false',
       },
-      handlePaste: () => {
-        setTimeout(() => triggerPagination('paste'), 100);
-        return false;
-      },
     },
     onCreate: ({ editor }) => {
+      // Migrate older documents that don't start with a page
+      const firstNode = editor.state.doc.firstChild;
+      if (firstNode && firstNode.type.name !== 'page') {
+        editor.commands.command(({ tr }) => {
+          const content = tr.doc.content;
+          const newPage = editor.schema.nodes.page.create(null, content);
+          tr.replaceWith(0, tr.doc.content.size, newPage);
+          return true;
+        });
+      }
       (editor as any).__triggerPagination = triggerPagination;
       onReady(editor);
-      // Initial pagination — retry multiple times to catch Yjs sync
-      setTimeout(() => triggerPagination('load'), 100);
-      setTimeout(() => triggerPagination('load'), 500);
-      setTimeout(() => triggerPagination('load'), 1500);
-      setTimeout(() => triggerPagination('load'), 3000);
+    },
+    onUpdate: () => {
+      triggerPagination('update');
     },
     immediatelyRender: false,
   });
 
-  // Watch for DOM mutations (AI updates, pastes, Yjs sync)
-  useEffect(() => {
-    if (!editor) return;
-    const observer = new MutationObserver(() => triggerPagination('mutation'));
-    const pm = editor.view.dom;
-    observer.observe(pm, { childList: true, subtree: true, characterData: true });
-    return () => observer.disconnect();
-  }, [editor, triggerPagination]);
+  const handleOverflow = useCallback(() => {
+    if (!editor || editor.isDestroyed) return;
+
+    let transactionNeeded = false;
+    const tr = editor.state.tr;
+    
+    // Iterate over pages in the editor
+    editor.state.doc.descendants((node, pos) => {
+      if (node.type.name === 'page') {
+        const domNode = editor.view.nodeDOM(pos) as HTMLElement;
+        if (!domNode) return false;
+        
+        const contentEl = domNode.querySelector('.page-content') as HTMLElement;
+        if (!contentEl) return false;
+
+        // Check if contentEl overflowed horizontally (created a 3rd column)
+        if (contentEl.scrollWidth > contentEl.clientWidth + 5) {
+          // Find the first child that overflowed into the 3rd column
+          for (let i = 0; i < contentEl.children.length; i++) {
+            const child = contentEl.children[i] as HTMLElement;
+            
+            // In CSS columns, an element pushed into the 3rd column will have an offsetLeft
+            // that exceeds the container's width.
+            const isOverflowing = child.offsetLeft >= contentEl.clientWidth;
+            
+            if (isOverflowing) {
+              try {
+                // posAtDOM returns the position INSIDE the block. We need the position BEFORE it.
+                const innerPos = editor.view.posAtDOM(child, 0);
+                if (innerPos < 0) continue; // Guard against nodes not mapped in ProseMirror
+                
+                // Ensure innerPos is within valid document bounds before resolving
+                if (innerPos > editor.state.doc.content.size) continue;
+                
+                const blockPos = Math.max(pos + 1, editor.state.doc.resolve(innerPos).before());
+                const blockEnd = pos + node.nodeSize - 1; // End of this page content
+                
+                if (blockPos > pos && blockEnd > blockPos) {
+                  const slice = tr.doc.slice(blockPos, blockEnd);
+                  tr.delete(blockPos, blockEnd);
+                  
+                  const nextNodePos = pos + node.nodeSize;
+                  const nextNode = tr.doc.nodeAt(nextNodePos);
+                  
+                  if (nextNode && nextNode.type.name === 'page') {
+                    tr.insert(nextNodePos + 1, slice.content);
+                  } else {
+                    // Create new page
+                    const newPage = editor.schema.nodes.page.create(null, slice.content);
+                    tr.insert(pos + node.nodeSize, newPage);
+                  }
+                  transactionNeeded = true;
+                  break; // Break inner loop, resolve one page overflow per pass
+                }
+              } catch (e) {
+                console.warn('Pagination slice error, skipping child:', e);
+              }
+            }
+          }
+        }
+        return false; // Don't descend into page children
+      }
+    });
+
+    if (transactionNeeded) {
+      editor.view.dispatch(tr);
+    }
+  }, [editor]);
+
+  const triggerPagination = useCallback((reason: string) => {
+    if (paginationLockRef.current) return;
+    paginationLockRef.current = true;
+
+    // Run multiple passes to account for layout shifts
+    const passes = [0, 150, 500, 1000];
+    passes.forEach((delay, index) => {
+      setTimeout(() => {
+        handleOverflow();
+        if (index === passes.length - 1) {
+          paginationLockRef.current = false;
+        }
+      }, delay);
+    });
+  }, [handleOverflow]);
 
   // Keep triggerPagination reference fresh on editor
   useEffect(() => {
@@ -200,47 +239,9 @@ export default function TipTap({ projectId, userId, userName, userColor, onReady
     };
   }, [ydoc, provider]);
 
-  // Render page overlay cards
-  const pageCards = [];
-  for (let i = 0; i < pageCount; i++) {
-    pageCards.push(
-      <div
-        key={i}
-        className="page-card"
-        style={{
-          position: 'absolute',
-          left: 0, right: 0,
-          top: i * (PAGE_HEIGHT + PAGE_GAP),
-          height: PAGE_HEIGHT,
-          background: 'white',
-          boxShadow: '0 1px 4px rgba(0,0,0,0.15), 0 0 1px rgba(0,0,0,0.1)',
-          pointerEvents: 'none',
-          zIndex: 0,
-          borderRadius: '2px',
-        }}
-      />
-    );
-  }
-
-  // Continuous Mode Styles
   return (
-    <div className="tiptap-editor-wrapper" ref={wrapperRef} style={{
-      background: '#fff',
-      boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-      width: PAGE_WIDTH,
-      margin: '40px auto',
-      minHeight: PAGE_HEIGHT,
-      position: 'relative',
-      transition: 'min-height 0.3s ease',
-    }}>
-      {/* Hidden overlays since we are in continuous mode, but kept for future toggle */}
-      <div className="page-overlays" style={{ display: 'none' }}>
-        {pageCards}
-      </div>
-
-      <div style={{ position: 'relative', zIndex: 1 }}>
-        <EditorContent editor={editor} />
-      </div>
+    <div className="tiptap-editor-wrapper" ref={wrapperRef} id="print-root">
+      <EditorContent editor={editor} />
 
       {/* BubbleMenu for images */}
       {editor && (
@@ -275,33 +276,35 @@ export default function TipTap({ projectId, userId, userName, userColor, onReady
       <style>{`
         .tiptap-editor-wrapper {
           position: relative;
-          background: #fff;
-        }
-
-        /* Force ALL editor containers transparent so grey gap shows */
-        .tiptap-editor-wrapper .tiptap,
-        .tiptap-editor-wrapper .EditorContent,
-        .tiptap-editor-wrapper [data-tiptap-editor],
-        .tiptap-editor-wrapper > div {
-          background: transparent !important;
+          background: #f0f2f5;
+          min-height: 100vh;
+          padding: 40px 0;
         }
 
         .ProseMirror {
           width: 100%;
           margin: 0 auto;
-          padding: ${PAGE_PADDING}px;
-          min-height: ${PAGE_HEIGHT}px;
           outline: none;
           background: transparent !important;
           box-sizing: border-box !important;
         }
 
+        .page-content {
+          column-count: ${columns};
+          column-gap: ${columnGap};
+          column-fill: auto;
+          text-align: justify;
+          hyphens: auto;
+          orphans: 2;
+          widows: 2;
+        }
+
         .ProseMirror p { margin-bottom: 12px; line-height: inherit; }
-        .ProseMirror hr { border: none; border-top: 1px solid #ddd; margin: 2rem 0; }
-        .ProseMirror h1, .ProseMirror h2 { column-span: all; text-align: center; margin-bottom: 24px; }
+        .ProseMirror hr { border: none; border-top: 1px solid #ddd; margin: 2rem 0; -webkit-column-span: all; column-span: all; }
+        .ProseMirror h1, .ProseMirror h2 { -webkit-column-span: all; column-span: all; text-align: center; margin-bottom: 24px; }
         .ProseMirror h1 { font-size: 24px; font-weight: 900; }
         .ProseMirror h2 { font-size: 18px; font-weight: 700; border-top: 1px solid #eee; padding-top: 16px; margin-top: 32px; }
-        .ProseMirror [data-type="citation"] { color: #B48E4D; font-weight: 700; cursor: pointer; }
+        .ProseMirror [data-type="citation"] { color: inherit; font-weight: 600; cursor: pointer; }
 
         .collaboration-cursor__caret {
           position: relative; margin-left: -1px; margin-right: -1px;
@@ -313,6 +316,35 @@ export default function TipTap({ projectId, userId, userName, userColor, onReady
           font-size: 10px; font-style: normal; font-weight: 700;
           line-height: normal; user-select: none; color: #fff;
           padding: 2px 4px; border-radius: 2px; white-space: nowrap;
+        }
+
+        /* ─── PRINT EXPORT STYLES ─── */
+        @media print {
+          body * {
+            visibility: hidden;
+            margin: 0; padding: 0;
+            background: #fff;
+          }
+          #print-root, #print-root * {
+            visibility: visible;
+          }
+          #print-root {
+            position: absolute;
+            left: 0; top: 0;
+            width: 100%;
+          }
+          .page-container {
+            margin: 0 !important;
+            box-shadow: none !important;
+            padding: ${PAGE_PADDING}px !important;
+            page-break-after: always;
+            break-after: page;
+          }
+          .page-content {
+            /* Ensure columns print correctly based on format */
+            column-count: ${columns} !important;
+            column-gap: ${columnGap} !important;
+          }
         }
       `}</style>
     </div>

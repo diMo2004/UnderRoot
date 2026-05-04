@@ -37,14 +37,14 @@ CREATE INDEX IF NOT EXISTS idx_collaborators_user_id ON collaborators(user_id);
 
 CREATE TABLE IF NOT EXISTS citations (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    project_id      VARCHAR(255) NOT NULL,
-    user_id         VARCHAR(255) NOT NULL,
-    paper_id        VARCHAR(255) NOT NULL,
+    project_id      TEXT NOT NULL,
+    user_id         TEXT NOT NULL,
+    paper_id        TEXT NOT NULL,
     title           TEXT NOT NULL,
     authors         TEXT[],
     year            INT,
-    venue           VARCHAR(500),
-    doi             VARCHAR(255),
+    venue           TEXT,
+    doi             TEXT,
     citation_count  INT DEFAULT 0,
     inserted_at     TIMESTAMPTZ DEFAULT NOW()
 );

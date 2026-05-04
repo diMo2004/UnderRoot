@@ -34,6 +34,7 @@ def _records_to_papers(records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         src = (r.get("source") or "external").strip()
         url = (r.get("url") or "").strip()
         doi = (r.get("doi") or "").strip()
+        authors_raw = r.get("authors") or []
 
         # make a stable-ish id for dedupe in routers/citation.py (uses paper.get("paperId"))
         paper_id = ""
@@ -44,11 +45,14 @@ def _records_to_papers(records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         else:
             paper_id = f"TITLE:{title.lower()}"
 
+        # Build S2-compatible author list
+        authors = [{"name": a} for a in authors_raw] if isinstance(authors_raw, list) and authors_raw and isinstance(authors_raw[0], str) else authors_raw
+
         out.append(
             {
                 "paperId": paper_id,
                 "title": title,
-                "authors": [],          # not available in current scholarly_sources
+                "authors": authors,
                 "year": r.get("year"),
                 "venue": src,           # best-effort
                 "citationCount": 0,
@@ -88,19 +92,17 @@ async def search_papers_fallback_async(query: str, limit: int = 10) -> List[Dict
     return _records_to_papers(records)[:limit]
 
 async def search_for_claim_async(claim: str, limit: int = 10) -> List[Dict[str, Any]]:
-    from services.knowledge_base import kb
     keywords = extract_keywords(claim)
 
-    # 1) Try Local KB first
-    local_papers = kb.search([claim], top_k=5)
-    if local_papers:
-        external_papers = search_papers(keywords, limit=limit // 2)
-        return (local_papers + external_papers)[:limit]
-
-    # 2) Fallback to S2
+    # 1) Try Semantic Scholar first (best author metadata)
     papers = search_papers(keywords, limit=limit)
     if papers:
         return papers
 
-    # 3) Fallback using the raw claim
-    return await search_papers_fallback_async(claim, limit=limit)
+    # 2) Fallback to multi-source (OpenAlex + CrossRef + arXiv + S2)
+    fallback = await search_papers_fallback_async(claim, limit=limit)
+    if fallback:
+        return fallback
+
+    # 3) Last resort: raw claim as query
+    return await search_papers_fallback_async(keywords, limit=limit)

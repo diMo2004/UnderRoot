@@ -41,6 +41,7 @@ def _norm_item(
     doi: str = "",
     year: Optional[int] = None,
     source: str = "",
+    authors: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     return {
         "title": _clean_text((title or "").strip()),
@@ -49,6 +50,7 @@ def _norm_item(
         "doi": (doi or "").strip(),
         "year": year,
         "source": source,
+        "authors": authors or [],
     }
 
 
@@ -122,14 +124,21 @@ async def _fetch_openalex(client: httpx.AsyncClient, query: str, limit: int) -> 
 
     out = []
     for w in rows:
+        # Extract authors from authorships
+        authors = []
+        for authorship in (w.get("authorships") or []):
+            name = (authorship.get("author") or {}).get("display_name", "").strip()
+            if name:
+                authors.append(name)
         out.append(
             _norm_item(
                 title=w.get("title") or w.get("display_name") or "",
-                abstract="",  # optional: parse abstract_inverted_index
+                abstract="",
                 url=w.get("id") or "",
                 doi=w.get("doi") or "",
                 year=w.get("publication_year"),
                 source="openalex",
+                authors=authors,
             )
         )
     return out
@@ -150,7 +159,15 @@ async def _fetch_crossref(client: httpx.AsyncClient, query: str, limit: int) -> 
         issued = w.get("issued", {}).get("date-parts", [])
         year = issued[0][0] if issued and issued[0] else None
         url_ = w.get("URL") or (f"https://doi.org/{doi}" if doi else "")
-        out.append(_norm_item(title=title, abstract=abstract, url=url_, doi=doi, year=year, source="crossref"))
+        # Extract authors from CrossRef author array
+        authors = []
+        for a in (w.get("author") or []):
+            given = (a.get("given") or "").strip()
+            family = (a.get("family") or "").strip()
+            name = f"{given} {family}".strip()
+            if name:
+                authors.append(name)
+        out.append(_norm_item(title=title, abstract=abstract, url=url_, doi=doi, year=year, source="crossref", authors=authors))
     return out
 
 
@@ -177,14 +194,24 @@ async def _fetch_arxiv(client: httpx.AsyncClient, query: str, limit: int) -> Lis
         url_ = _tag("id")
         published = _tag("published")
         year = int(published[:4]) if len(published) >= 4 and published[:4].isdigit() else None
-        out.append(_norm_item(title=title, abstract=abstract, url=url_, doi="", year=year, source="arxiv"))
+        # Extract authors from arXiv <author><name> tags
+        authors = []
+        author_blocks = e.split("<author>")[1:]
+        for ab in author_blocks:
+            name_start = ab.find("<name>")
+            name_end = ab.find("</name>")
+            if name_start != -1 and name_end != -1:
+                name = ab[name_start + 6:name_end].strip()
+                if name:
+                    authors.append(name)
+        out.append(_norm_item(title=title, abstract=abstract, url=url_, doi="", year=year, source="arxiv", authors=authors))
 
     return out
 
 
 async def _fetch_semantic_scholar(client: httpx.AsyncClient, query: str, limit: int) -> List[Dict[str, Any]]:
     url = "https://api.semanticscholar.org/graph/v1/paper/search"
-    params = {"query": query, "limit": limit, "fields": "title,abstract,year,url,externalIds"}
+    params = {"query": query, "limit": limit, "fields": "title,authors,abstract,year,url,externalIds"}
     r = await client.get(url, params=params, timeout=REQUEST_TIMEOUT)
     r.raise_for_status()
     rows = (r.json() or {}).get("data", []) or []
@@ -193,6 +220,8 @@ async def _fetch_semantic_scholar(client: httpx.AsyncClient, query: str, limit: 
     for p in rows:
         ext = p.get("externalIds") or {}
         doi = ext.get("DOI") or ""
+        # Extract authors from Semantic Scholar
+        authors = [a.get("name", "").strip() for a in (p.get("authors") or []) if a.get("name", "").strip()]
         out.append(
             _norm_item(
                 title=p.get("title") or "",
@@ -201,6 +230,7 @@ async def _fetch_semantic_scholar(client: httpx.AsyncClient, query: str, limit: 
                 doi=doi,
                 year=p.get("year"),
                 source="semantic_scholar",
+                authors=authors,
             )
         )
     return out

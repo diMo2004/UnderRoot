@@ -1,4 +1,4 @@
-export type CitationStyle = "apa" | "ieee" | "mla" | "unknown";
+export type CitationStyle = "apa" | "ieee" | "mla" | "acm" | "unknown";
 
 /**
  * Detect citation style from a "template" string.
@@ -18,6 +18,7 @@ export function detectCitationStyleFromTemplate(template?: string): CitationStyl
   if (t.includes("apa")) return "apa";
   if (t.includes("ieee")) return "ieee";
   if (t.includes("mla")) return "mla";
+  if (t.includes("acm")) return "acm";
 
   // IEEE: numbered brackets
   if (/\[\s*\d+\s*\]/.test(template)) return "ieee";
